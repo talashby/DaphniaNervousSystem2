@@ -6,6 +6,7 @@
 #include "thread"
 #include "atomic"
 #include "chrono"
+#include "NervousSystem/NervousSystem.h"
 
 #undef UNICODE
 #define WIN32_LEAN_AND_MEAN
@@ -13,7 +14,6 @@
 #include <windows.h>
 #include <winsock2.h>
 #include "mutex"
-#include "AdminTcpClient.h"
 #undef min
 #undef max
 
@@ -94,6 +94,7 @@ void ObserverClient::StartSimulation()
 					else
 					{
 						// wrong protocol
+						m_serverProtocolVersion = msgReceive->m_serverVersion;
 						closesocket(m_socketC);
 						m_socketC = 0;
 						break;
@@ -119,7 +120,8 @@ void ObserverClient::StartSimulation()
 	}
 	else
 	{
-		// server not found
+		// server not found or wrong protocol
+		m_isSimulationRunning = false;
 	}
 
 }
@@ -136,6 +138,7 @@ void ObserverClient::StopSimulation()
 	{
 		s_simulationThread.join();
 	}
+	NervousSystem::Instance()->StopSimulation();
 }
 
 bool ObserverClient::IsSimulationRunning() const
@@ -169,37 +172,37 @@ void ObserverClient::PPhTick()
 		if (m_isLeft)
 		{
 			MsgRotateLeft msgMove;
-			msgMove.m_value = 16;
+			msgMove.m_value = 1;
 			SendServerMsg(msgMove, sizeof(msgMove));
 		}
 		if (m_isRight)
 		{
 			MsgRotateRight msgMove;
-			msgMove.m_value = 16;
+			msgMove.m_value = 1;
 			SendServerMsg(msgMove, sizeof(msgMove));
 		}
 		if (m_isUp)
 		{
 			MsgRotateDown msgMove;
-			msgMove.m_value = 16;
+			msgMove.m_value = 1;
 			SendServerMsg(msgMove, sizeof(msgMove));
 		}
 		if (m_isDown)
 		{
 			MsgRotateUp msgMove;
-			msgMove.m_value = 16;
+			msgMove.m_value = 1;
 			SendServerMsg(msgMove, sizeof(msgMove));
 		}
 		if (m_isForward)
 		{
 			MsgMoveForward msgMove;
-			msgMove.m_value = 32 * PPh::AdminUniverse::GetUniverseScale();
+			msgMove.m_value = 16;
 			SendServerMsg(msgMove, sizeof(msgMove));
 		}
 		if (m_isBackward)
 		{
 			MsgMoveBackward msgMove;
-			msgMove.m_value = 32 * PPh::AdminUniverse::GetUniverseScale();
+			msgMove.m_value = 16;
 			SendServerMsg(msgMove, sizeof(msgMove));
 		}
 
@@ -209,6 +212,10 @@ void ObserverClient::PPhTick()
 			if (const MsgGetStateResponse *msgGetStateResponse = QueryMessage<MsgGetStateResponse>(buffer))
 			{
 				timeOfTheUniverse = msgGetStateResponse->m_time;
+				static bool once = []() {
+					NervousSystem::Instance()->StartSimulation(timeOfTheUniverse);
+					return true;
+				} ();
 			}
 			else if (const MsgGetStateExtResponse *msgGetStateExtResponse = QueryMessage<MsgGetStateExtResponse>(buffer))
 			{
@@ -227,9 +234,10 @@ void ObserverClient::PPhTick()
 			else if (const MsgSendPhoton *msgSendPhoton = QueryMessage<MsgSendPhoton>(buffer))
 			{
 				// receive photons back // revert Y-coordinate because of texture format
-				// photon (x,y) placed to [GetObserverEyeSize() - y -1][x] for simple copy to texture purpose
+				// photon (x,y) placed to [GetEyeSize() - y -1][x] for simple copy to texture purpose
 				m_eyeColorArray[GetObserverEyeSize() - msgSendPhoton->m_posY - 1][msgSendPhoton->m_posX] = msgSendPhoton->m_color;
 				m_eyeUpdateTimeArray[GetObserverEyeSize() - msgSendPhoton->m_posY - 1][msgSendPhoton->m_posX] = timeOfTheUniverse;
+				NervousSystem::Instance()->PhotonReceived(msgSendPhoton->m_posX, msgSendPhoton->m_posY, msgSendPhoton->m_color);
 			}
 			else if (const MsgGetStatisticsResponse *msgRcv = QueryMessage<MsgGetStatisticsResponse>(buffer))
 			{
@@ -241,6 +249,8 @@ void ObserverClient::PPhTick()
 				m_universeThreadsNum = msgRcv->m_universeThreadsCount;
 				m_clientServerPerformanceRatio = msgRcv->m_clientServerPerformanceRatio;
 				m_serverClientPerformanceRatio = msgRcv->m_serverClientPerformanceRatio;
+				m_serverTimeStat = timeOfTheUniverse;
+				m_clientTimeStat = NervousSystem::Instance()->GetTime(); // it is correct because client s_time change from this thread
 			}
 			else
 			{
@@ -282,6 +292,7 @@ void ObserverClient::PPhTick()
 				std::atomic_store(&m_spEyeColorArrayOut, spEyeColorArrayOut);
 			}
 		}
+		NervousSystem::Instance()->NextTick(timeOfTheUniverse);
 	}
 
 	int64_t timeEllapsed;
@@ -353,7 +364,7 @@ VectorInt32Math ObserverClient::GrabEatenCrumbPos()
 void ObserverClient::GetStatisticsParams(uint32_t &outQuantumOfTimePerSecond, uint32_t &outUniverseThreadsNum,
 	uint32_t &outTickTimeMusAverageUniverseThreadsMin, uint32_t &outTickTimeMusAverageUniverseThreadsMax,
 	uint32_t &outTickTimeMusAverageObserverThread, uint64_t &outClientServerPerformanceRatio,
-	uint64_t &outServerClientPerformanceRatio)
+	uint64_t &outServerClientPerformanceRatio, uint64_t &outServerTime, uint64_t &outClientTime) const
 {
 	std::lock_guard<std::mutex> guard(s_serverStatisticsMutex);
 	outQuantumOfTimePerSecond = m_quantumOfTimePerSecond;
@@ -363,6 +374,13 @@ void ObserverClient::GetStatisticsParams(uint32_t &outQuantumOfTimePerSecond, ui
 	outTickTimeMusAverageObserverThread = m_TickTimeMusAverageObserverThread;
 	outClientServerPerformanceRatio = m_clientServerPerformanceRatio;
 	outServerClientPerformanceRatio = m_serverClientPerformanceRatio;
+	outServerTime = m_serverTimeStat;
+	outClientTime = m_clientTimeStat;
+}
+
+uint32_t ObserverClient::GetServerProtocolVersion() const
+{
+	return m_serverProtocolVersion;
 }
 
 const char* ObserverClient::RecvServerMsg()

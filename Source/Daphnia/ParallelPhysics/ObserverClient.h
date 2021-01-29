@@ -22,7 +22,6 @@ constexpr int32_t UPDATE_EYE_TEXTURE_OUT = 20; // (milliseconds) how often updat
 constexpr int32_t STATISTIC_REQUEST_PERIOD = 900; // milliseconds
 constexpr const char *SERVER_IP = "127.0.0.1";
 
-
 typedef std::array< std::array<OrientationVectorMath, GetObserverEyeSize()>, GetObserverEyeSize()> EyeArray;
 typedef std::shared_ptr< EyeArray > SP_EyeState;
 typedef std::array< std::array<EtherColor, GetObserverEyeSize()>, GetObserverEyeSize()> EyeColorArray;
@@ -60,7 +59,11 @@ public:
 		uint32_t &outTickTimeMusAverageUniverseThreadsMax, // average tick time in microseconds
 		uint32_t &outTickTimeMusAverageObserverThread, // average tick time in microseconds
 		uint64_t &outClientServerPerformanceRatio,
-		uint64_t &outServerClientPerformanceRatio);
+		uint64_t &outServerClientPerformanceRatio,
+		uint64_t &outServerTime,
+		uint64_t &outClientTime) const;
+
+	uint32_t GetServerProtocolVersion() const;
 
 	// Set motor neurons
 	void SetIsLeft(bool value) { m_isLeft = value; }
@@ -80,12 +83,13 @@ private:
 
 	uint32_t m_socketC;
 	uint32_t m_port;
-
-	const int32_t EYE_IMAGE_DELAY = 1000; // quantum of time
+	uint32_t m_serverProtocolVersion = 0;
+		
+	const int32_t EYE_IMAGE_DELAY = 5000; // quantum of time
 	const int32_t ECHOLOCATION_FREQUENCY = 1; // quantum of time
 	int32_t m_echolocationCounter = 0;
 
-	EyeColorArray m_eyeColorArray = EyeColorArray(); // photon (x,y) placed to [GetObserverEyeSize() - y -1][x] for simple copy to texture purpose
+	EyeColorArray m_eyeColorArray = EyeColorArray(); // photon (x,y) placed to [CommonParams::OBSERVER_EYE_SIZE - y -1][x] for simple copy to texture purpose
 	EyeUpdateTimeArray m_eyeUpdateTimeArray = EyeUpdateTimeArray();
 
 	int64_t m_lastTextureUpdateTime = 0;
@@ -113,6 +117,8 @@ private:
 	uint32_t m_TickTimeMusAverageObserverThread = 0;
 	uint64_t m_clientServerPerformanceRatio = 0;
 	uint64_t m_serverClientPerformanceRatio = 0;
+	uint64_t m_serverTimeStat = 0;
+	uint64_t m_clientTimeStat = 0;
 
 	// motor neurons
 	bool m_isLeft=false, m_isRight=false, m_isUp=false, m_isDown=false, m_isForward=false, m_isBackward=false;
