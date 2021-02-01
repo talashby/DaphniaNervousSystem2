@@ -49,7 +49,7 @@ struct NetworksMetadata
 	uint64_t m_end;
 	uint32_t m_size;
 };
-static std::array<NetworksMetadata, 4> s_networksMetadata{
+static std::array<NetworksMetadata, 3> s_networksMetadata{
 	NetworksMetadata{0, 0, (uint64_t)(&s_eyeNetwork[0][0]), (uint64_t)(&s_eyeNetwork[0][0]+EYE_COLOR_NEURONS_NUM), sizeof(SensoryNeuron)},
 	NetworksMetadata{0, 0, (uint64_t)&s_eyeGeneralizationNetwork[0], (uint64_t)(&s_eyeGeneralizationNetwork[0] + s_eyeGeneralizationNetwork.size()), sizeof(GeneralizingNeuron)},
 	NetworksMetadata{0, 0, (uint64_t)&s_motorNetwork[0], (uint64_t)(&s_motorNetwork[0]+s_motorNetwork.size()), sizeof(MotorNeuron)}
@@ -146,8 +146,31 @@ void NervousSystem::Init()
 	}
 	s_threadNeurons.back().first = s_networksMetadata.back().m_beginNeuronNum; // last thread for ConditionedReflexCreatorNeuron
 	s_threadNeurons.back().second = s_networksMetadata.back().m_endNeuronNum; // last thread for ConditionedReflexCreatorNeuron
-	 
-
+	
+	uint32_t yPos = 0;
+	uint32_t index = 0;
+	for (int ii = 0; ii < 5; ++ii)
+	{
+		uint32_t xPos = 0;
+		uint32_t yLength = 3;
+		if (ii == 2)
+		{
+			yLength = 4;
+		}
+		for (int jj = 0; jj < 5; ++jj)
+		{
+			uint32_t xLength = 3;
+			if (jj == 2)
+			{
+				xLength = 4;
+			}
+			SP_SynapseVector synapses = CreateSynapses(xPos, yPos, xLength, yLength);
+			s_eyeGeneralizationNetwork[index].InitExplicit(synapses);
+			xPos += xLength;
+			++index;
+		}
+		yPos += yLength;
+	}
 	s_nervousSystem = new NervousSystem();
 }
 
@@ -294,6 +317,19 @@ const char* NervousSystem::GetStatus() const
 void NervousSystem::SetStatus(NervousSystemStatus status)
 {
 	s_status = static_cast<uint32_t>(status);
+}
+
+SP_SynapseVector NervousSystem::CreateSynapses(uint32_t xPos, uint32_t yPos, uint32_t xLength, uint32_t yLength)
+{
+	SP_SynapseVector synapses = std::make_shared<SynapseVector>();
+	for (uint32_t ii = yPos; ii < yPos+yLength; ++ii)
+	{
+		for (uint32_t jj = xPos; jj < xPos+xLength; ++jj)
+		{
+			synapses->push_back(Synapse(&s_eyeNetwork[jj][ii]));
+		}
+	}
+	return synapses;
 }
 
 void NervousSystemThread(uint32_t threadNum)

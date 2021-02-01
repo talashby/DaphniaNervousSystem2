@@ -170,7 +170,7 @@ GeneralizingNeuron::GeneralizingNeuron()
 {
 }
 
-void GeneralizingNeuron::Init(const SP_SynapseVector & synapses)
+void GeneralizingNeuron::InitExplicit(const SP_SynapseVector &synapses)
 {
 	m_synapses = synapses;
 }
@@ -183,9 +183,10 @@ uint32_t GeneralizingNeuron::ReadAxon() const
 
 void GeneralizingNeuron::Tick()
 {
+	int isTimeOdd = NSNamespace::GetNSTime() % 2;
+	m_axon[isTimeOdd] = 0;
 	for (const Synapse& synapse : *m_synapses)
 	{
-		int isTimeOdd = NSNamespace::GetNSTime() % 2;
 		m_axon[isTimeOdd] += synapse.Tick();
 	}
 }

@@ -6,20 +6,16 @@
 #include <vector>
 #include <memory>
 
-class ConditionedReflexNeuron;
-class PrognosticNeuron;
-class Neuron;
-
 constexpr uint32_t SECOND_IN_QUANTS = PPh::CommonParams::QUANTUM_OF_TIME_PER_SECOND;  // quantum of time
 constexpr uint32_t MILLISECOND_IN_QUANTS = PPh::CommonParams::QUANTUM_OF_TIME_PER_SECOND / 1000;  // quantum of time
 
 class Synapse
 {
 public:
-	Synapse(Neuron *from);
+	Synapse(class Neuron *from);
 	uint32_t Tick() const;
 private:
-	Neuron *m_from;
+	class Neuron *m_from;
 };
 
 typedef std::vector<Synapse> SynapseVector;
@@ -59,7 +55,7 @@ public:
 	SensoryNeuron() = default;
 	virtual ~SensoryNeuron() = default;
 
-	void Init()  override;
+	void Init() override;
 
 	bool IsActive() const override;
 	uint32_t ReadAxon() const override;
@@ -139,8 +135,9 @@ class GeneralizingNeuron : public Neuron
 {
 public:
 	GeneralizingNeuron();
-	void Init(const SP_SynapseVector &synapses);
 	virtual ~GeneralizingNeuron() = default;
+
+	void InitExplicit(const SP_SynapseVector &synapses);
 
 	uint32_t ReadAxon() const override;
 	constexpr static uint8_t GetTypeStatic() { return static_cast<uint8_t>(NeuronTypes::GeneralizingNeuron); }

@@ -2,9 +2,15 @@
 #pragma once
 
 #include "ParallelPhysics/PPhHelpers.h"
+#include <vector>
+#include <memory>
 
 class Neuron;
+class Synapse;
 class ConditionedReflexCreatorNeuron;
+
+typedef std::vector<Synapse> SynapseVector;
+typedef std::shared_ptr<SynapseVector> SP_SynapseVector;
 
 namespace NSNamespace
 {
@@ -44,6 +50,8 @@ public:
 	void SetStatus(NervousSystemStatus status);
 
 private:
+
+	static SP_SynapseVector CreateSynapses(uint32_t xPos, uint32_t yPos, uint32_t xLength, uint32_t yLength);
 
 	// statistics
 	uint64_t m_lastTime;

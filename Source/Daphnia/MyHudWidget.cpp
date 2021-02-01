@@ -14,6 +14,7 @@
 #include "LevelSettings.h"
 #include "ParallelPhysics/PPhHelpers.h"
 #include "limits"
+#include "NervousSystem/NervousSystem.h"
 
 static UMyHudWidget* s_InstancePtr;
 
@@ -180,9 +181,12 @@ void UMyHudWidget::ShowPPhStats(int16_t latitude, int16_t longitude, const PPh::
 			uint32_t outTickTimeMusAverageObserverThread;
 			uint64_t outClientServerPerformanceRatio;
 			uint64_t outServerClientPerformanceRatio;
+			uint64_t outServerTime;
+			uint64_t outClientTime;
 			PPh::ObserverClient::Instance()->GetStatisticsParams(outQuantumOfTimePerSecond, outUniverseThreadsNum,
 				outTickTimeMusAverageUniverseThreadsMin, outTickTimeMusAverageUniverseThreadsMax,
-				outTickTimeMusAverageObserverThread, outClientServerPerformanceRatio, outServerClientPerformanceRatio);
+				outTickTimeMusAverageObserverThread, outClientServerPerformanceRatio, outServerClientPerformanceRatio,
+				outServerTime, outClientTime);
 			FString sFps = FString("FPS (quantum of time per second): ") + FString::FromInt(outQuantumOfTimePerSecond);
 			sFps += "\nUniverse threads count: " + FString::FromInt(outUniverseThreadsNum);
 			if (outUniverseThreadsNum)
@@ -197,6 +201,8 @@ void UMyHudWidget::ShowPPhStats(int16_t latitude, int16_t longitude, const PPh::
 				FString::FromInt(position.m_posZ) + ")";
 			sFps += FString("\nLattitude: ") + FString::FromInt(latitude);
 			sFps += FString("\nLongitude: ") + FString::FromInt(longitude);
+			sFps += FString("\nServer time: ") + FString::FromInt(outServerTime);
+			sFps += FString("\nClient time: ") + FString::FromInt(outClientTime);
 			pTextBlockStats->SetText(FText::FromString(sFps));
 		}
 	}
@@ -234,6 +240,7 @@ void UMyHudWidget::SwitchToParallelPhysics()
 			eyeState = GetPawnEyeState(World);
 			FVector pawnLocation = ADaphniaPawn::GetInstance()->GetActorLocation();
 //			PPh::VectorInt32Math position = UPPSettings::ConvertLocationToPPhPosition(pawnLocation);
+			NervousSystem::Init();
 			PPh::ObserverClient::Init(new MyObserver());
 			PPh::ObserverClient::Instance()->StartSimulation();
 			uint64_t observerId = PPh::ObserverClient::Instance()->GetLastObserverID();
