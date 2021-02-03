@@ -22,7 +22,7 @@
 //
 
 static NervousSystem* s_nervousSystem = nullptr;
-static std::array<std::thread, 4> s_threads;
+static std::array<std::thread, 3> s_threads;
 static std::array<std::pair<uint32_t, uint32_t>, s_threads.size()> s_threadNeurons; // [first neuron; last neuron)
 static std::atomic<bool> s_isSimulationRunning = false;
 static std::atomic<uint64_t> s_time = 0; // absolute universe time
@@ -38,8 +38,10 @@ std::atomic<uint32_t> s_status; // NervousSystemStatus
 
 constexpr static int EYE_COLOR_NEURONS_NUM =  PPh::GetObserverEyeSize()*PPh::GetObserverEyeSize();
 static std::array<std::array<SensoryNeuron, PPh::GetObserverEyeSize()>, PPh::GetObserverEyeSize()> s_eyeNetwork;
-static std::array<GeneralizingNeuron, 25> s_eyeGeneralizationNetwork;
+static std::array<SimpleAdderNeuron, 25> s_eyeGeneralizationNetwork;
+static EmptinessActivatorNeuron s_emptinessActivatorNeuron;
 static std::array<MotorNeuron, 3> s_motorNetwork; // 0 - forward, 1 - left, 2 - right
+
 
 struct NetworksMetadata
 {
@@ -49,9 +51,10 @@ struct NetworksMetadata
 	uint64_t m_end;
 	uint32_t m_size;
 };
-static std::array<NetworksMetadata, 3> s_networksMetadata{
+static std::array<NetworksMetadata, 4> s_networksMetadata{
 	NetworksMetadata{0, 0, (uint64_t)(&s_eyeNetwork[0][0]), (uint64_t)(&s_eyeNetwork[0][0]+EYE_COLOR_NEURONS_NUM), sizeof(SensoryNeuron)},
-	NetworksMetadata{0, 0, (uint64_t)&s_eyeGeneralizationNetwork[0], (uint64_t)(&s_eyeGeneralizationNetwork[0] + s_eyeGeneralizationNetwork.size()), sizeof(GeneralizingNeuron)},
+	NetworksMetadata{0, 0, (uint64_t)&s_eyeGeneralizationNetwork[0], (uint64_t)(&s_eyeGeneralizationNetwork[0] + s_eyeGeneralizationNetwork.size()), sizeof(SimpleAdderNeuron)},
+	NetworksMetadata{0, 0, (uint64_t)&s_emptinessActivatorNeuron, (uint64_t)(&s_emptinessActivatorNeuron + 1), sizeof(EmptinessActivatorNeuron)},
 	NetworksMetadata{0, 0, (uint64_t)&s_motorNetwork[0], (uint64_t)(&s_motorNetwork[0]+s_motorNetwork.size()), sizeof(MotorNeuron)}
 };
 
@@ -147,6 +150,7 @@ void NervousSystem::Init()
 	s_threadNeurons.back().first = s_networksMetadata.back().m_beginNeuronNum; // last thread for ConditionedReflexCreatorNeuron
 	s_threadNeurons.back().second = s_networksMetadata.back().m_endNeuronNum; // last thread for ConditionedReflexCreatorNeuron
 	
+	// init eyeGeneralizationNetwork
 	uint32_t yPos = 0;
 	uint32_t index = 0;
 	for (int ii = 0; ii < 5; ++ii)
@@ -171,6 +175,14 @@ void NervousSystem::Init()
 		}
 		yPos += yLength;
 	}
+	// init emptinessActivatorNeuron
+	SP_SynapseVector synapses = std::make_shared<SynapseVector>();
+	for (Neuron &neuron : s_eyeGeneralizationNetwork)
+	{
+		synapses->push_back(Synapse(&neuron));
+	}
+	s_emptinessActivatorNeuron.InitExplicit(synapses);
+
 	s_nervousSystem = new NervousSystem();
 }
 

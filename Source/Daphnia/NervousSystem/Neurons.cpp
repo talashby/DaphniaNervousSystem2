@@ -67,6 +67,7 @@ void SensoryNeuron::Tick()
 {
 	int isTimeOdd = NSNamespace::GetNSTime() % 2;
 	m_axon[isTimeOdd] = m_dendrite[isTimeOdd];
+	m_dendrite[isTimeOdd] = 0;
 }
 
 void SensoryNeuronRed::Tick()
@@ -145,10 +146,10 @@ void MotorNeuron::Tick()
 		//PPh::ObserverClient::Instance()->SetIsForward(isActive);
 		break;
 	case 1:
-		PPh::ObserverClient::Instance()->SetIsLeft(isActive);
+		//PPh::ObserverClient::Instance()->SetIsLeft(isActive);
 		break;
 	case 2:
-		PPh::ObserverClient::Instance()->SetIsRight(isActive);
+		//PPh::ObserverClient::Instance()->SetIsRight(isActive);
 		break;
 	}
 	m_isActive[isTimeOdd] = isActive;
@@ -166,28 +167,88 @@ uint32_t MotorNeuron::GetMovingSpontaneousCount()
 	return m_movingSpontaneousCount.load();
 }
 
-GeneralizingNeuron::GeneralizingNeuron()
+SimpleAdderNeuron::SimpleAdderNeuron()
 {
 }
 
-void GeneralizingNeuron::InitExplicit(const SP_SynapseVector &synapses)
+void SimpleAdderNeuron::InitExplicit(const SP_SynapseVector &synapses)
 {
 	m_synapses = synapses;
 }
 
-uint32_t GeneralizingNeuron::ReadAxon() const
+uint32_t SimpleAdderNeuron::ReadAxon() const
 {
 	int isTimeEven = (NSNamespace::GetNSTime() + 1) % 2;
 	return m_axon[isTimeEven];
 }
 
-void GeneralizingNeuron::Tick()
+void SimpleAdderNeuron::Tick()
 {
 	int isTimeOdd = NSNamespace::GetNSTime() % 2;
-	m_axon[isTimeOdd] = 0;
+	uint16_t axon = 0;
 	for (const Synapse& synapse : *m_synapses)
 	{
-		m_axon[isTimeOdd] += synapse.Tick();
+		axon += synapse.Tick();
+	}
+	if (axon < m_axon[isTimeOdd])
+	{
+		if (m_axon[isTimeOdd] > 0)
+		{
+			--m_axon[isTimeOdd];
+		}
+	}
+	else
+	{
+		m_axon[isTimeOdd] = axon;
 	}
 }
 
+EmptinessActivatorNeuron::EmptinessActivatorNeuron()
+{
+}
+
+void EmptinessActivatorNeuron::InitExplicit(const SP_SynapseVector &synapses)
+{
+	assert(synapses->size());
+	m_synapses = synapses;
+}
+
+void EmptinessActivatorNeuron::Tick()
+{
+	if (m_synapses->at(m_synapseIndex).Tick())
+	{
+		m_synapseIndex = 0;
+	}
+	else
+	{
+		if (m_synapseIndex < m_synapses->size() - 1)
+		{
+			++m_synapseIndex;
+		}
+		else
+		{
+			for (const Synapse& synapse : *m_synapses)
+			{
+				if (synapse.Tick())
+				{
+					m_synapseIndex = 0;
+					break;
+				}
+			}
+			if (m_synapseIndex == m_synapses->size() - 1)
+			{
+				int eee = 0;
+			}
+		}
+	}
+
+	assert(m_synapseIndex < m_synapses->size());
+	int isTimeOdd = NSNamespace::GetNSTime() % 2;
+	m_isActive[isTimeOdd] = m_synapseIndex == m_synapses->size() - 1;
+}
+
+bool EmptinessActivatorNeuron::IsActive() const
+{
+	int isTimeEven = (NSNamespace::GetNSTime() + 1) % 2;
+	return m_isActive[isTimeEven];
+}

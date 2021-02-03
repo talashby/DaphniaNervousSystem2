@@ -14,6 +14,7 @@
 #include <windows.h>
 #include <winsock2.h>
 #include "mutex"
+#include "AdminTcpClient.h"
 #undef min
 #undef max
 
@@ -172,37 +173,37 @@ void ObserverClient::PPhTick()
 		if (m_isLeft)
 		{
 			MsgRotateLeft msgMove;
-			msgMove.m_value = 1;
+			msgMove.m_value = 16;
 			SendServerMsg(msgMove, sizeof(msgMove));
 		}
 		if (m_isRight)
 		{
 			MsgRotateRight msgMove;
-			msgMove.m_value = 1;
+			msgMove.m_value = 16;
 			SendServerMsg(msgMove, sizeof(msgMove));
 		}
 		if (m_isUp)
 		{
 			MsgRotateDown msgMove;
-			msgMove.m_value = 1;
+			msgMove.m_value = 16;
 			SendServerMsg(msgMove, sizeof(msgMove));
 		}
 		if (m_isDown)
 		{
 			MsgRotateUp msgMove;
-			msgMove.m_value = 1;
+			msgMove.m_value = 16;
 			SendServerMsg(msgMove, sizeof(msgMove));
 		}
 		if (m_isForward)
 		{
 			MsgMoveForward msgMove;
-			msgMove.m_value = 16;
+			msgMove.m_value = 32 * PPh::AdminUniverse::GetUniverseScale();
 			SendServerMsg(msgMove, sizeof(msgMove));
 		}
 		if (m_isBackward)
 		{
 			MsgMoveBackward msgMove;
-			msgMove.m_value = 16;
+			msgMove.m_value = 32 * PPh::AdminUniverse::GetUniverseScale();
 			SendServerMsg(msgMove, sizeof(msgMove));
 		}
 
@@ -234,7 +235,7 @@ void ObserverClient::PPhTick()
 			else if (const MsgSendPhoton *msgSendPhoton = QueryMessage<MsgSendPhoton>(buffer))
 			{
 				// receive photons back // revert Y-coordinate because of texture format
-				// photon (x,y) placed to [GetEyeSize() - y -1][x] for simple copy to texture purpose
+				// photon (x,y) placed to [GetObserverEyeSize() - y -1][x] for simple copy to texture purpose
 				m_eyeColorArray[GetObserverEyeSize() - msgSendPhoton->m_posY - 1][msgSendPhoton->m_posX] = msgSendPhoton->m_color;
 				m_eyeUpdateTimeArray[GetObserverEyeSize() - msgSendPhoton->m_posY - 1][msgSendPhoton->m_posX] = timeOfTheUniverse;
 				NervousSystem::Instance()->PhotonReceived(msgSendPhoton->m_posX, msgSendPhoton->m_posY, msgSendPhoton->m_color);

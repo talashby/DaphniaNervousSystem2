@@ -13,7 +13,7 @@ class Synapse
 {
 public:
 	Synapse(class Neuron *from);
-	uint32_t Tick() const;
+	uint32_t Tick() const; // returns connected neuron activity value
 private:
 	class Neuron *m_from;
 };
@@ -45,7 +45,8 @@ protected:
 		SensoryNeuronGreen,
 		SensoryNeuronBlue,
 		MotorNeuron,
-		GeneralizingNeuron
+		SimpleAdderNeuron,
+		EmptinessActivatorNeuron
 	};
 };
 
@@ -131,16 +132,16 @@ private:
 	static std::atomic<uint32_t> m_movingSpontaneousCount;
 };
 
-class GeneralizingNeuron : public Neuron
+class SimpleAdderNeuron : public Neuron
 {
 public:
-	GeneralizingNeuron();
-	virtual ~GeneralizingNeuron() = default;
+	SimpleAdderNeuron();
+	virtual ~SimpleAdderNeuron() = default;
 
 	void InitExplicit(const SP_SynapseVector &synapses);
 
 	uint32_t ReadAxon() const override;
-	constexpr static uint8_t GetTypeStatic() { return static_cast<uint8_t>(NeuronTypes::GeneralizingNeuron); }
+	constexpr static uint8_t GetTypeStatic() { return static_cast<uint8_t>(NeuronTypes::SimpleAdderNeuron); }
 	uint8_t GetType() override { return GetTypeStatic(); }
 
 	void Tick() override;
@@ -149,4 +150,24 @@ public:
 private:
 	uint16_t m_axon[2];
 	SP_SynapseVector m_synapses;
+};
+
+class EmptinessActivatorNeuron : public Neuron
+{
+public:
+	EmptinessActivatorNeuron();
+	virtual ~EmptinessActivatorNeuron() = default;
+
+	void InitExplicit(const SP_SynapseVector &synapses);
+
+	constexpr static uint8_t GetTypeStatic() { return static_cast<uint8_t>(NeuronTypes::EmptinessActivatorNeuron); }
+	uint8_t GetType() override { return GetTypeStatic(); }
+
+	void Tick() override;
+
+	bool IsActive() const override;
+private:
+	SP_SynapseVector m_synapses;
+	uint32_t m_synapseIndex = 0;
+	bool m_isActive[2];
 };
