@@ -20,7 +20,14 @@ Synapse::Synapse(Neuron *from)
 	m_from = from;
 }
 
-uint32_t Synapse::Tick() const
+uint32_t Synapse::IsActive() const
+{
+	assert(from);
+	bool result = m_from->IsActive();
+	return result;
+}
+
+uint32_t Synapse::ReadAxon() const
 {
 	assert(from);
 	uint32_t result = m_from->ReadAxon();
@@ -167,13 +174,9 @@ uint32_t MotorNeuron::GetMovingSpontaneousCount()
 	return m_movingSpontaneousCount.load();
 }
 
-SimpleAdderNeuron::SimpleAdderNeuron()
+void SimpleAdderNeuron::InitExplicit(SynapseVector &synapses)
 {
-}
-
-void SimpleAdderNeuron::InitExplicit(const SP_SynapseVector &synapses)
-{
-	m_synapses = synapses;
+	m_synapses = std::move(synapses);
 }
 
 uint32_t SimpleAdderNeuron::ReadAxon() const
@@ -186,9 +189,9 @@ void SimpleAdderNeuron::Tick()
 {
 	int isTimeOdd = NSNamespace::GetNSTime() % 2;
 	uint16_t axon = 0;
-	for (const Synapse& synapse : *m_synapses)
+	for (const Synapse& synapse : m_synapses)
 	{
-		axon += synapse.Tick();
+		axon += synapse.ReadAxon();
 	}
 	if (axon < m_axon[isTimeOdd])
 	{
@@ -203,52 +206,115 @@ void SimpleAdderNeuron::Tick()
 	}
 }
 
-EmptinessActivatorNeuron::EmptinessActivatorNeuron()
-{
-}
-
-void EmptinessActivatorNeuron::InitExplicit(const SP_SynapseVector &synapses)
+void EmptinessActivatorNeuron::InitExplicit(SynapseVector &synapses)
 {
 	assert(synapses->size());
-	m_synapses = synapses;
+	m_synapses = std::move(synapses);
 }
 
 void EmptinessActivatorNeuron::Tick()
 {
-	if (m_synapses->at(m_synapseIndex).Tick())
+	if (m_synapses[m_synapseIndex].ReadAxon())
 	{
 		m_synapseIndex = 0;
 	}
 	else
 	{
-		if (m_synapseIndex < m_synapses->size() - 1)
+		if (m_synapseIndex < m_synapses.size() - 1)
 		{
 			++m_synapseIndex;
 		}
 		else
 		{
-			for (const Synapse& synapse : *m_synapses)
+			for (const Synapse& synapse : m_synapses)
 			{
-				if (synapse.Tick())
+				if (synapse.ReadAxon())
 				{
 					m_synapseIndex = 0;
 					break;
 				}
 			}
-			if (m_synapseIndex == m_synapses->size() - 1)
+			if (m_synapseIndex == m_synapses.size() - 1)
 			{
 				int eee = 0;
 			}
 		}
 	}
 
-	assert(m_synapseIndex < m_synapses->size());
+	assert(m_synapseIndex < m_synapses.size());
 	int isTimeOdd = NSNamespace::GetNSTime() % 2;
-	m_isActive[isTimeOdd] = m_synapseIndex == m_synapses->size() - 1;
+	m_isActive[isTimeOdd] = m_synapseIndex == m_synapses.size() - 1;
 }
 
 bool EmptinessActivatorNeuron::IsActive() const
 {
 	int isTimeEven = (NSNamespace::GetNSTime() + 1) % 2;
 	return m_isActive[isTimeEven];
+}
+
+void PremotorNeuron::InitExplicit(SynapseVector & synapses)
+{
+}
+
+void PremotorNeuron::Tick()
+{
+	int isTimeOdd = NSNamespace::GetNSTime() % 2;
+
+	bool isAllActive = true;
+	for (const Synapse& synapse : m_synapses)
+	{
+		if (!synapse.IsActive())
+		{
+			isAllActive = false;
+			break;
+		}
+	}
+
+	if (isAllActive)
+	{
+		bool activated = 0 == m_axon[isTimeOdd];
+		if (activated)
+		{ // select random motor neuron
+			int32_t totalWeight = 0;
+			for (const Synapse& synapse : m_motorSynapses)
+			{
+				totalWeight += synapse.GetWeight();
+			}
+			int32_t rnd = PPh::Rand32(totalWeight);
+
+			int32_t currentWeight = 0;
+			for (const Synapse& synapse : m_motorSynapses)
+			{
+				currentWeight += synapse.GetWeight();
+				if (currentWeight > rnd)
+				{
+					m_activatedSynapse = synapse;
+					break;
+				}
+			}
+		}
+
+		uint16_t axon = 0;
+		for (const Synapse& synapse : m_synapses)
+		{
+			axon += synapse.ReadAxon();
+		}
+
+		if (axon < m_axon[isTimeOdd])
+		{
+			if (m_axon[isTimeOdd] > 0)
+			{
+				--m_axon[isTimeOdd];
+			}
+		}
+		else
+		{
+			m_axon[isTimeOdd] = axon;
+		}
+
+		if (activated)
+		{ // try to activate random motor neuron
+
+		}
+	}
 }

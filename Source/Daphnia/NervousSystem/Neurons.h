@@ -13,13 +13,13 @@ class Synapse
 {
 public:
 	Synapse(class Neuron *from);
-	uint32_t Tick() const; // returns connected neuron activity value
+	uint32_t IsActive() const;
+	uint32_t ReadAxon() const; // returns connected neuron activity value
 private:
 	class Neuron *m_from;
 };
 
 typedef std::vector<Synapse> SynapseVector;
-typedef std::shared_ptr<SynapseVector> SP_SynapseVector;
 
 class Neuron
 {
@@ -46,7 +46,8 @@ protected:
 		SensoryNeuronBlue,
 		MotorNeuron,
 		SimpleAdderNeuron,
-		EmptinessActivatorNeuron
+		EmptinessActivatorNeuron,
+		PremotorNeuron
 	};
 };
 
@@ -135,10 +136,10 @@ private:
 class SimpleAdderNeuron : public Neuron
 {
 public:
-	SimpleAdderNeuron();
+	SimpleAdderNeuron() = default;
 	virtual ~SimpleAdderNeuron() = default;
 
-	void InitExplicit(const SP_SynapseVector &synapses);
+	void InitExplicit(SynapseVector &synapses);
 
 	uint32_t ReadAxon() const override;
 	constexpr static uint8_t GetTypeStatic() { return static_cast<uint8_t>(NeuronTypes::SimpleAdderNeuron); }
@@ -149,16 +150,16 @@ public:
 
 private:
 	uint16_t m_axon[2];
-	SP_SynapseVector m_synapses;
+	SynapseVector m_synapses;
 };
 
 class EmptinessActivatorNeuron : public Neuron
 {
 public:
-	EmptinessActivatorNeuron();
+	EmptinessActivatorNeuron() = default;
 	virtual ~EmptinessActivatorNeuron() = default;
 
-	void InitExplicit(const SP_SynapseVector &synapses);
+	void InitExplicit(SynapseVector &synapses);
 
 	constexpr static uint8_t GetTypeStatic() { return static_cast<uint8_t>(NeuronTypes::EmptinessActivatorNeuron); }
 	uint8_t GetType() override { return GetTypeStatic(); }
@@ -167,7 +168,25 @@ public:
 
 	bool IsActive() const override;
 private:
-	SP_SynapseVector m_synapses;
+	SynapseVector m_synapses;
 	uint32_t m_synapseIndex = 0;
 	bool m_isActive[2];
+};
+
+
+class PremotorNeuron : public Neuron
+{
+public:
+	PremotorNeuron() = default;
+	virtual ~PremotorNeuron() = default;
+
+	void InitExplicit(SynapseVector &synapses);
+
+	constexpr static uint8_t GetTypeStatic() { return static_cast<uint8_t>(NeuronTypes::PremotorNeuron); }
+	uint8_t GetType() override { return GetTypeStatic(); }
+
+	void Tick() override;
+private:
+	SynapseVector m_synapses;
+	uint16_t m_axon[2];
 };

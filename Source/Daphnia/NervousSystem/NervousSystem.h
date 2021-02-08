@@ -10,7 +10,6 @@ class Synapse;
 class ConditionedReflexCreatorNeuron;
 
 typedef std::vector<Synapse> SynapseVector;
-typedef std::shared_ptr<SynapseVector> SP_SynapseVector;
 
 namespace NSNamespace
 {
@@ -51,7 +50,7 @@ public:
 
 private:
 
-	static SP_SynapseVector CreateSynapses(uint32_t xPos, uint32_t yPos, uint32_t xLength, uint32_t yLength);
+	static SynapseVector CreateSynapses(uint32_t xPos, uint32_t yPos, uint32_t xLength, uint32_t yLength);
 
 	// statistics
 	uint64_t m_lastTime;

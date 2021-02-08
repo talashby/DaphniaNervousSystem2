@@ -168,7 +168,7 @@ void NervousSystem::Init()
 			{
 				xLength = 4;
 			}
-			SP_SynapseVector synapses = CreateSynapses(xPos, yPos, xLength, yLength);
+			SynapseVector synapses = CreateSynapses(xPos, yPos, xLength, yLength);
 			s_eyeGeneralizationNetwork[index].InitExplicit(synapses);
 			xPos += xLength;
 			++index;
@@ -176,10 +176,10 @@ void NervousSystem::Init()
 		yPos += yLength;
 	}
 	// init emptinessActivatorNeuron
-	SP_SynapseVector synapses = std::make_shared<SynapseVector>();
+	SynapseVector synapses;
 	for (Neuron &neuron : s_eyeGeneralizationNetwork)
 	{
-		synapses->push_back(Synapse(&neuron));
+		synapses.push_back(Synapse(&neuron));
 	}
 	s_emptinessActivatorNeuron.InitExplicit(synapses);
 
@@ -331,14 +331,14 @@ void NervousSystem::SetStatus(NervousSystemStatus status)
 	s_status = static_cast<uint32_t>(status);
 }
 
-SP_SynapseVector NervousSystem::CreateSynapses(uint32_t xPos, uint32_t yPos, uint32_t xLength, uint32_t yLength)
+SynapseVector NervousSystem::CreateSynapses(uint32_t xPos, uint32_t yPos, uint32_t xLength, uint32_t yLength)
 {
-	SP_SynapseVector synapses = std::make_shared<SynapseVector>();
+	SynapseVector synapses;
 	for (uint32_t ii = yPos; ii < yPos+yLength; ++ii)
 	{
 		for (uint32_t jj = xPos; jj < xPos+xLength; ++jj)
 		{
-			synapses->push_back(Synapse(&s_eyeNetwork[jj][ii]));
+			synapses.push_back(Synapse(&s_eyeNetwork[jj][ii]));
 		}
 	}
 	return synapses;
