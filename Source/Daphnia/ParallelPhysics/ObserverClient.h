@@ -66,12 +66,12 @@ public:
 	uint32_t GetServerProtocolVersion() const;
 
 	// Set motor neurons
-	void SetIsLeft(bool value) { m_isLeft = value; }
-	void SetIsRight(bool value) { m_isRight = value; }
-	void SetIsUp(bool value) { m_isUp = value; }
-	void SetIsDown(bool value) { m_isDown = value; }
-	void SetIsForward(bool value) { m_isForward = value; }
-	void SetIsBackward(bool value) { m_isBackward = value; }
+	void SetIsLeft(bool value = true) { m_isLeft = value; }
+	void SetIsRight(bool value = true) { m_isRight = value; }
+	void SetIsUp(bool value = true) { m_isUp = value; }
+	void SetIsDown(bool value = true) { m_isDown = value; }
+	void SetIsForward(bool value = true) { m_isForward = value; }
+	void SetIsBackward(bool value = true) { m_isBackward = value; }
 
 protected:
 	const char* RecvServerMsg(); // returns nullptr if error occur
@@ -121,7 +121,12 @@ private:
 	uint64_t m_clientTimeStat = 0;
 
 	// motor neurons
-	bool m_isLeft=false, m_isRight=false, m_isUp=false, m_isDown=false, m_isForward=false, m_isBackward=false;
+	std::atomic<bool> m_isLeft = false;
+	std::atomic<bool> m_isRight = false;
+	std::atomic<bool> m_isUp = false;
+	std::atomic<bool> m_isDown = false;
+	std::atomic<bool> m_isForward = false;
+	std::atomic<bool> m_isBackward = false;
 };
 
 }

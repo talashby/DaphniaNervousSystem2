@@ -17,6 +17,9 @@ class DAPHNIA_API AMyPlayerController : public APlayerController
 public:
 		AMyPlayerController();
 		static AMyPlayerController* GetInstance();
+
+		void Tick(float DeltaSeconds) override;
+
 		bool IsLeft() const;
 		bool IsRight() const;
 		bool IsUp() const;

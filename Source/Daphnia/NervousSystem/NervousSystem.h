@@ -38,16 +38,6 @@ public:
 
 	void PhotonReceived(uint8_t m_posX, uint8_t m_posY, PPh::EtherColor m_color);
 
-	enum class NervousSystemStatus
-	{
-		Relaxing = 0,
-		SpontaneousActivity,
-		ConditionedReflexProceed
-	};
-
-	const char* GetStatus() const;
-	void SetStatus(NervousSystemStatus status);
-
 private:
 
 	static SynapseVector CreateSynapses(uint32_t xPos, uint32_t yPos, uint32_t xLength, uint32_t yLength);

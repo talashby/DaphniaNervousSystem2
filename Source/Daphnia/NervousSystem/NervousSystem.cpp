@@ -40,6 +40,7 @@ constexpr static int EYE_COLOR_NEURONS_NUM =  PPh::GetObserverEyeSize()*PPh::Get
 static std::array<std::array<SensoryNeuron, PPh::GetObserverEyeSize()>, PPh::GetObserverEyeSize()> s_eyeNetwork;
 static std::array<SimpleAdderNeuron, 25> s_eyeGeneralizationNetwork;
 static EmptinessActivatorNeuron s_emptinessActivatorNeuron;
+static PremotorNeuron s_emptinessPremotorNeuron;
 static std::array<MotorNeuron, 3> s_motorNetwork; // 0 - forward, 1 - left, 2 - right
 
 
@@ -51,10 +52,11 @@ struct NetworksMetadata
 	uint64_t m_end;
 	uint32_t m_size;
 };
-static std::array<NetworksMetadata, 4> s_networksMetadata{
+static std::array<NetworksMetadata, 5> s_networksMetadata{
 	NetworksMetadata{0, 0, (uint64_t)(&s_eyeNetwork[0][0]), (uint64_t)(&s_eyeNetwork[0][0]+EYE_COLOR_NEURONS_NUM), sizeof(SensoryNeuron)},
 	NetworksMetadata{0, 0, (uint64_t)&s_eyeGeneralizationNetwork[0], (uint64_t)(&s_eyeGeneralizationNetwork[0] + s_eyeGeneralizationNetwork.size()), sizeof(SimpleAdderNeuron)},
 	NetworksMetadata{0, 0, (uint64_t)&s_emptinessActivatorNeuron, (uint64_t)(&s_emptinessActivatorNeuron + 1), sizeof(EmptinessActivatorNeuron)},
+	NetworksMetadata{0, 0, (uint64_t)&s_emptinessPremotorNeuron, (uint64_t)(&s_emptinessPremotorNeuron + 1), sizeof(PremotorNeuron)},
 	NetworksMetadata{0, 0, (uint64_t)&s_motorNetwork[0], (uint64_t)(&s_motorNetwork[0]+s_motorNetwork.size()), sizeof(MotorNeuron)}
 };
 
@@ -128,13 +130,13 @@ void NervousSystem::Init()
 #endif
 
 	assert(s_threads.size() > 1);
-	uint32_t threadsNumSpecial = s_threads.size()-1; // last thread for ConditionedReflexCreatorNeuron
-	uint32_t neuronsNum = s_networksMetadata[s_networksMetadata.size()-2].m_endNeuronNum;
+	uint32_t threadsNumSpecial = s_threads.size() - 1; // last thread for ConditionedReflexCreatorNeuron
+	uint32_t neuronsNum = s_networksMetadata[s_networksMetadata.size() - 2].m_endNeuronNum;
 	assert(s_networksMetadata.back().m_endNeuronNum - neuronsNum == 1); // last neuron should be ConditionedReflexCreatorNeuron
 	uint32_t step = neuronsNum / threadsNumSpecial;
 	uint32_t remain = neuronsNum - step * threadsNumSpecial;
 	uint32_t posBegin = 0;
-	for (uint32_t ii = 0; ii < s_threadNeurons.size()-1; ++ii)
+	for (uint32_t ii = 0; ii < s_threadNeurons.size() - 1; ++ii)
 	{
 		std::pair<uint32_t, uint32_t> &pair = s_threadNeurons[ii];
 		int32_t posEnd = posBegin + step;
@@ -149,7 +151,7 @@ void NervousSystem::Init()
 	}
 	s_threadNeurons.back().first = s_networksMetadata.back().m_beginNeuronNum; // last thread for ConditionedReflexCreatorNeuron
 	s_threadNeurons.back().second = s_networksMetadata.back().m_endNeuronNum; // last thread for ConditionedReflexCreatorNeuron
-	
+
 	// init eyeGeneralizationNetwork
 	uint32_t yPos = 0;
 	uint32_t index = 0;
@@ -175,13 +177,26 @@ void NervousSystem::Init()
 		}
 		yPos += yLength;
 	}
-	// init emptinessActivatorNeuron
-	SynapseVector synapses;
-	for (Neuron &neuron : s_eyeGeneralizationNetwork)
-	{
-		synapses.push_back(Synapse(&neuron));
+
+	{	// init emptinessActivatorNeuron
+		SynapseVector synapses;
+		for (Neuron &neuron : s_eyeGeneralizationNetwork)
+		{
+			synapses.push_back(Synapse(&neuron));
+		}
+		s_emptinessActivatorNeuron.InitExplicit(synapses);
 	}
-	s_emptinessActivatorNeuron.InitExplicit(synapses);
+
+	{	// init emptiness premotor neuron
+		SynapseVector synapses;
+		synapses.push_back(Synapse(&s_emptinessActivatorNeuron));
+		MotorSynapseVector motorSynapses;
+		for (MotorNeuron &neuron : s_motorNetwork)
+		{
+			motorSynapses.push_back(MotorSynapse(&neuron));
+		}
+		s_emptinessPremotorNeuron.InitExplicit(synapses, motorSynapses);
+	}
 
 	s_nervousSystem = new NervousSystem();
 }
@@ -305,30 +320,6 @@ void NervousSystem::PhotonReceived(uint8_t m_posX, uint8_t m_posY, PPh::EtherCol
 			s_eyeNetworkBlue[m_posX][m_posY].ExcitatorySynapse();
 		}*/
 	}
-}
-
-const char* NervousSystem::GetStatus() const
-{
-	NervousSystemStatus status = static_cast<NervousSystemStatus>(s_status.load());
-	switch (status)
-	{
-	case NervousSystemStatus::Relaxing:
-		return "Relaxing";
-	case NervousSystemStatus::SpontaneousActivity:
-		return "SpontaneousActivity";
-	case NervousSystemStatus::ConditionedReflexProceed:
-		return "ConditionedReflexProceed";
-	default:
-		assert(false);
-		break;
-	}
-	
-	return "Relaxing";
-}
-
-void NervousSystem::SetStatus(NervousSystemStatus status)
-{
-	s_status = static_cast<uint32_t>(status);
 }
 
 SynapseVector NervousSystem::CreateSynapses(uint32_t xPos, uint32_t yPos, uint32_t xLength, uint32_t yLength)

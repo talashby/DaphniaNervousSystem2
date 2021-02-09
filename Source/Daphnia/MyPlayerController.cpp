@@ -20,6 +20,34 @@ AMyPlayerController* AMyPlayerController::GetInstance()
 	return s_InstancePtr;
 }
 
+void AMyPlayerController::Tick(float DeltaSeconds)
+{
+	if (m_isLeft)
+	{
+		PPh::ObserverClient::Instance()->SetIsLeft();
+	}
+	else if (m_isRight)
+	{
+		PPh::ObserverClient::Instance()->SetIsRight();
+	}
+	else if (m_isUp)
+	{
+		PPh::ObserverClient::Instance()->SetIsUp();
+	}
+	else if (m_isDown)
+	{
+		PPh::ObserverClient::Instance()->SetIsDown();
+	}
+	else if (m_isForward)
+	{
+		PPh::ObserverClient::Instance()->SetIsForward();
+	}
+	else if (m_isBackward)
+	{
+		PPh::ObserverClient::Instance()->SetIsBackward();
+	}
+}
+
 bool AMyPlayerController::IsLeft() const
 {
 	return m_isLeft;
@@ -70,32 +98,26 @@ bool AMyPlayerController::InputKey(FKey Key, EInputEvent EventType, float Amount
 		if ("A" == Key.GetFName() || "Left" == Key.GetFName())
 		{
 			m_isLeft = state;
-			PPh::ObserverClient::Instance()->SetIsLeft(state);
 		}
 		else if ("D" == Key.GetFName() || "Right" == Key.GetFName())
 		{
 			m_isRight = state;
-			PPh::ObserverClient::Instance()->SetIsRight(state);
 		}
 		else if ("W" == Key.GetFName() || "Up" == Key.GetFName())
 		{
 			m_isUp = state;
-			PPh::ObserverClient::Instance()->SetIsUp(state);
 		}
 		else if ("S" == Key.GetFName() || "Down" == Key.GetFName())
 		{
 			m_isDown = state;
-			PPh::ObserverClient::Instance()->SetIsDown(state);
 		}
 		else if ("SpaceBar" == Key.GetFName())
 		{
 			m_isForward = state;
-			PPh::ObserverClient::Instance()->SetIsForward(state);
 		}
 		else if ("Backslash" == Key.GetFName())
 		{
 			m_isBackward = state;
-			PPh::ObserverClient::Instance()->SetIsBackward(state);
 		}
 	}
 

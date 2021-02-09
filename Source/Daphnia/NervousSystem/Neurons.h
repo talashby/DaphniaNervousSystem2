@@ -8,18 +8,34 @@
 
 constexpr uint32_t SECOND_IN_QUANTS = PPh::CommonParams::QUANTUM_OF_TIME_PER_SECOND;  // quantum of time
 constexpr uint32_t MILLISECOND_IN_QUANTS = PPh::CommonParams::QUANTUM_OF_TIME_PER_SECOND / 1000;  // quantum of time
+constexpr uint32_t IRRITATION_MULTIPLIER = 1'000; // purpose is convenient work with integral numbers
+constexpr uint32_t FADING_VAL = IRRITATION_MULTIPLIER / MILLISECOND_IN_QUANTS;
 
 class Synapse
 {
 public:
 	Synapse(class Neuron *from);
-	uint32_t IsActive() const;
+	bool IsActive() const;
 	uint32_t ReadAxon() const; // returns connected neuron activity value
 private:
 	class Neuron *m_from;
 };
 
 typedef std::vector<Synapse> SynapseVector;
+
+class MotorSynapse
+{
+public:
+	MotorSynapse(class MotorNeuron *to);
+	uint32_t GetWeight() const;
+	bool IsActive() const;
+	void TransferIrritation(uint32_t irritation) const; // transfer irritation to motor neuron dendrite
+private:
+	class MotorNeuron *m_to;
+	uint32_t m_weight = 1000;
+};
+
+typedef std::vector<MotorSynapse> MotorSynapseVector;
 
 class Neuron
 {
@@ -120,17 +136,11 @@ public:
 
 	void Tick() override;
 
-	void ExcitatorySynapse();
-	static uint32_t GetMovingSpontaneousCount();
+	void AddIrritationToDendrite(uint16_t addedIrritation);
 private:
-	uint8_t m_dendrite[2]; // 0-254 - excitation 255 - connection lost
+	std::atomic<uint32_t> m_dendrite[2]; // 0-254 - excitation 255 - connection lost
 	uint8_t m_axon[2]; // 0-254 - excitation 255 - connection lost
-	uint16_t m_accumulatedExcitation;
-	uint64_t m_lastExcitationTime;
-	uint32_t m_spontaneusActivityTimeStart;
-	uint64_t m_spontaneusActivityTimeFinishAbs;
 	bool m_isActive[2];
-	static std::atomic<uint32_t> m_movingSpontaneousCount;
 };
 
 class SimpleAdderNeuron : public Neuron
@@ -167,10 +177,15 @@ public:
 	void Tick() override;
 
 	bool IsActive() const override;
+	uint32_t ReadAxon() const override;
 private:
 	SynapseVector m_synapses;
 	uint32_t m_synapseIndex = 0;
 	bool m_isActive[2];
+	uint32_t m_activityTime = 0;
+	uint32_t m_inhibitionTime = 0;
+	const uint32_t m_activityTimeMax = 1000 * MILLISECOND_IN_QUANTS;
+	const uint32_t m_inhibitionTimeMax = 1000 * MILLISECOND_IN_QUANTS;
 };
 
 
@@ -180,7 +195,7 @@ public:
 	PremotorNeuron() = default;
 	virtual ~PremotorNeuron() = default;
 
-	void InitExplicit(SynapseVector &synapses);
+	void InitExplicit(SynapseVector &synapses, MotorSynapseVector &motorSynapses);
 
 	constexpr static uint8_t GetTypeStatic() { return static_cast<uint8_t>(NeuronTypes::PremotorNeuron); }
 	uint8_t GetType() override { return GetTypeStatic(); }
@@ -188,5 +203,7 @@ public:
 	void Tick() override;
 private:
 	SynapseVector m_synapses;
+	MotorSynapseVector m_motorSynapses;
 	uint16_t m_axon[2];
+	uint32_t m_activatedSynapseIndex = 0;
 };
