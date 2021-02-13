@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ParallelPhysics/ServerProtocol.h"
+#include "ParallelPhysics/PPhHelpers.h"
 #include <array>
 #include <atomic>
 #include <vector>
@@ -63,7 +64,8 @@ protected:
 		MotorNeuron,
 		SimpleAdderNeuron,
 		EmptinessActivatorNeuron,
-		PremotorNeuron
+		PremotorNeuron,
+		ReinforcementTransferNeuron
 	};
 };
 
@@ -188,14 +190,13 @@ private:
 	const uint32_t m_inhibitionTimeMax = 1000 * MILLISECOND_IN_QUANTS;
 };
 
-
 class PremotorNeuron : public Neuron
 {
 public:
 	PremotorNeuron() = default;
 	virtual ~PremotorNeuron() = default;
 
-	void InitExplicit(SynapseVector &synapses, MotorSynapseVector &motorSynapses);
+	void InitExplicit(SynapseVector &&synapses, MotorSynapseVector &&motorSynapses);
 
 	constexpr static uint8_t GetTypeStatic() { return static_cast<uint8_t>(NeuronTypes::PremotorNeuron); }
 	uint8_t GetType() override { return GetTypeStatic(); }
@@ -206,4 +207,24 @@ private:
 	MotorSynapseVector m_motorSynapses;
 	uint16_t m_axon[2];
 	uint32_t m_activatedSynapseIndex = 0;
+};
+
+typedef std::array<uint32_t, 8> TransferMotivationArray; // left, right, up, down and diagonals
+
+class ReinforcementTransferNeuron : public Neuron
+{
+public:
+	ReinforcementTransferNeuron() = default;
+	virtual ~ReinforcementTransferNeuron() = default;
+
+	void InitExplicit(PremotorNeuron *premotorNeuron, const PPh::VectorInt32Math &pos3D);
+
+	constexpr static uint8_t GetTypeStatic() { return static_cast<uint8_t>(NeuronTypes::ReinforcementTransferNeuron); }
+	uint8_t GetType() override { return GetTypeStatic(); }
+
+	void Tick() override;
+private:
+	PremotorNeuron *m_premotorNeuron;
+	PPh::VectorInt32Math m_pos3D;
+	std::array <TransferMotivationArray, 2> m_transferMotivation;
 };

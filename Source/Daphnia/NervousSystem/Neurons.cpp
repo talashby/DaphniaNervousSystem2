@@ -268,7 +268,7 @@ uint32_t EmptinessActivatorNeuron::ReadAxon() const
 	return m_isActive[isTimeEven] * 1000 * IRRITATION_MULTIPLIER;
 }
 
-void PremotorNeuron::InitExplicit(SynapseVector &synapses, MotorSynapseVector &motorSynapses)
+void PremotorNeuron::InitExplicit(SynapseVector &&synapses, MotorSynapseVector &&motorSynapses)
 {
 	m_synapses = std::move(synapses);
 	m_motorSynapses = std::move(motorSynapses);
@@ -334,5 +334,57 @@ void PremotorNeuron::Tick()
 	}
 
 	m_motorSynapses[m_activatedSynapseIndex].TransferIrritation(m_axon[isTimeOdd]);
+}
+
+void ReinforcementTransferNeuron::InitExplicit(PremotorNeuron *premotorNeuron, const PPh::VectorInt32Math &pos3D)
+{
+	m_premotorNeuron = premotorNeuron;
+	m_pos3D = pos3D;
+	m_transferMotivation[0].fill({});
+	m_transferMotivation[1].fill({});
+}
+
+uint32_t GetCellTransferIndex(const PPh::VectorInt32Math &unitVector)
+{
+	int32_t index = (unitVector.m_posX + 1) * 3 + (unitVector.m_posY + 1);
+	if (index > 4)
+	{
+		--index;
+	}
+	return index;
+}
+
+PPh::VectorInt32Math GetUnitVectorFromCellTransferIndex(uint32_t index) // index [0;7]
+{
+	if (index > 3)
+	{
+		++index;
+	}
+	PPh::VectorInt32Math unitVector;
+	unitVector.m_posX = index / 3 - 1;
+	unitVector.m_posY = (index - (unitVector.m_posX + 1) * 3) - 1;
+	unitVector.m_posZ = 0;
+	return unitVector;
+}
+
+void ReinforcementTransferNeuron::Tick()
+{
+	uint64_t time = NSNamespace::GetNSTime();
+	int isTimeOdd = time % 2;
+	for (int ii = 0; ii < m_transferMotivation[0].size(); ++ii)
+	{
+		uint32_t motivation = m_transferMotivation[isTimeOdd][ii];
+		if (motivation > 0)
+		{
+			PPh::VectorInt32Math unitVector = GetUnitVectorFromCellTransferIndex(ii);
+			unitVector *= -1;
+			uint32_t neighbourIndex = GetCellTransferIndex(unitVector);
+			if (2 == abs(unitVector.m_posX) + abs(unitVector.m_posY))
+			{ // diagonal
+				uint32_t neighbourIndex2 = GetCellTransferIndex(PPh::VectorInt32Math(unitVector.m_posX, 0, 0));
+				uint32_t neighbourIndex3 = GetCellTransferIndex(PPh::VectorInt32Math(0, unitVector.m_posY, 0));
+			}
+		}
+	}
 
 }
