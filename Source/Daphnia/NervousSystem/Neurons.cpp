@@ -376,13 +376,20 @@ void ReinforcementTransferNeuron::Tick()
 		uint32_t motivation = m_transferMotivation[isTimeOdd][ii];
 		if (motivation > 0)
 		{
-			PPh::VectorInt32Math unitVector = GetUnitVectorFromCellTransferIndex(ii);
-			unitVector *= -1;
-			uint32_t neighbourIndex = GetCellTransferIndex(unitVector);
-			if (2 == abs(unitVector.m_posX) + abs(unitVector.m_posY))
-			{ // diagonal
-				uint32_t neighbourIndex2 = GetCellTransferIndex(PPh::VectorInt32Math(unitVector.m_posX, 0, 0));
-				uint32_t neighbourIndex3 = GetCellTransferIndex(PPh::VectorInt32Math(0, unitVector.m_posY, 0));
+			PPh::VectorInt32Math unitVectorInput = GetUnitVectorFromCellTransferIndex(ii);
+			{
+				PPh::VectorInt32Math unitVectorToNeighbour = unitVectorInput;
+				unitVectorToNeighbour *= -1;
+				PPh::VectorInt32Math nbrPos = m_pos3D + unitVectorToNeighbour;
+				if (s_brain[nbrPos.m_posX][nbrPos.m_posY][nbrPos.m_posZ])
+				{
+				}
+				uint32_t neighbourIndex = GetCellTransferIndex(unitVector);
+				if (2 == abs(unitVector.m_posX) + abs(unitVector.m_posY))
+				{ // diagonal
+					uint32_t neighbourIndex2 = GetCellTransferIndex(PPh::VectorInt32Math(unitVector.m_posX, 0, 0));
+					uint32_t neighbourIndex3 = GetCellTransferIndex(PPh::VectorInt32Math(0, unitVector.m_posY, 0));
+				}
 			}
 		}
 	}
