@@ -150,9 +150,18 @@ void NervousSystem::Init()
 	}
 	uint32_t neuronsNum = s_networksMetadata[s_networksMetadata.size() - 1].m_endNeuronNum;
 	assert(neuronsNum > 0);
-	s_brain.resize(neuronsNum);
-	s_brain[0].resize(neuronsNum);
-	s_brain[0][0].resize(neuronsNum);
+	{
+		uint32_t net3dSize = s_reinforcementTransferNewnessNetwork.size() + 2;
+		s_brain.resize(net3dSize);
+		for (auto &yArray : s_brain)
+		{
+			yArray.resize(net3dSize);
+			for (auto &zArray : yArray)
+			{
+				zArray.resize(net3dSize);
+			}
+		}
+	}
 
 	{ // fill s_threadNeurons
 		assert(s_threads.size() > 1);

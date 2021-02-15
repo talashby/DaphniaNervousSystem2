@@ -369,6 +369,7 @@ PPh::VectorInt32Math GetUnitVectorFromCellTransferIndex(uint32_t index) // index
 
 void ReinforcementTransferNeuron::Tick()
 {
+	assert(false);
 	uint64_t time = NSNamespace::GetNSTime();
 	int isTimeOdd = time % 2;
 	for (int ii = 0; ii < m_transferMotivation[0].size(); ++ii)
@@ -378,22 +379,36 @@ void ReinforcementTransferNeuron::Tick()
 		{
 			PPh::VectorInt32Math unitVectorToNeighbour = GetUnitVectorFromCellTransferIndex(ii);
 			{
-				PPh::VectorInt32Math nbrPos = m_pos3D + unitVectorToNeighbour;
-				ReinforcementTransferNeuron *neuron = NSNamespace::GetReinforcementTransferNeuron(nbrPos);
-				if (neuron > 0)
 				{
-					neuron->TransferMotivation(this, motivation);
-					if (2 == abs(unitVectorToNeighbour.m_posX) + abs(unitVectorToNeighbour.m_posY))
-					{ // diagonal
-						//uint32_t neighbourIndex2 = GetCellTransferIndex(PPh::VectorInt32Math(unitVectorToNeighbour.m_posX, 0, 0));
-						//uint32_t neighbourIndex3 = GetCellTransferIndex(PPh::VectorInt32Math(0, unitVectorToNeighbour.m_posY, 0));
+					PPh::VectorInt32Math nbrPos = m_pos3D + unitVectorToNeighbour;
+					ReinforcementTransferNeuron *neuron = NSNamespace::GetReinforcementTransferNeuron(nbrPos);
+					if (neuron > 0)
+					{
+						neuron->TransferMotivation(this, motivation);
 					}
 				}
-				//uint32_t neighbourIndex = GetCellTransferIndex(unitVector);
+				if (2 == abs(unitVectorToNeighbour.m_posX) + abs(unitVectorToNeighbour.m_posY))
+				{ // diagonal
+					{
+						PPh::VectorInt32Math nbrPos = m_pos3D + PPh::VectorInt32Math(unitVectorToNeighbour.m_posX, 0, 0);
+						ReinforcementTransferNeuron *neuron = NSNamespace::GetReinforcementTransferNeuron(nbrPos);
+						if (neuron > 0)
+						{
+							neuron->TransferMotivation(this, motivation);
+						}
+					}
+					{
+						PPh::VectorInt32Math nbrPos = m_pos3D + PPh::VectorInt32Math(0, unitVectorToNeighbour.m_posY, 0);
+						ReinforcementTransferNeuron *neuron = NSNamespace::GetReinforcementTransferNeuron(nbrPos);
+						if (neuron > 0)
+						{
+							neuron->TransferMotivation(this, motivation);
+						}
+					}
+				}
 			}
 		}
 	}
-
 }
 
 void ReinforcementTransferNeuron::TransferMotivation(ReinforcementTransferNeuron* neighbour, uint32_t motivation)
