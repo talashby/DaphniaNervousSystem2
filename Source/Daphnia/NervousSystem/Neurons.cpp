@@ -10,7 +10,7 @@ constexpr int32_t EXCITATION_ACCUMULATION_TIME = 100; // ms
 constexpr uint16_t EXCITATION_ACCUMULATION_LIMIT = EXCITATION_ACCUMULATION_TIME * MILLISECOND_IN_QUANTS; // units
 constexpr uint16_t SENSORY_NEURON_REINFORCEMENT_LIMIT = 65535; // units
 constexpr uint32_t SENSORY_NEURON_REINFORCEMENT_REFRESH_TIME = 5 * SECOND_IN_QUANTS;  // quantum of time
-
+constexpr uint32_t TRANSFER_MOTIVATION_REDUCING = 500; // milli units
 //
 
 Synapse::Synapse(Neuron *from)
@@ -376,22 +376,32 @@ void ReinforcementTransferNeuron::Tick()
 		uint32_t motivation = m_transferMotivation[isTimeOdd][ii];
 		if (motivation > 0)
 		{
-			PPh::VectorInt32Math unitVectorInput = GetUnitVectorFromCellTransferIndex(ii);
+			PPh::VectorInt32Math unitVectorToNeighbour = GetUnitVectorFromCellTransferIndex(ii);
 			{
-				PPh::VectorInt32Math unitVectorToNeighbour = unitVectorInput;
-				unitVectorToNeighbour *= -1;
 				PPh::VectorInt32Math nbrPos = m_pos3D + unitVectorToNeighbour;
-				if (s_brain[nbrPos.m_posX][nbrPos.m_posY][nbrPos.m_posZ])
+				ReinforcementTransferNeuron *neuron = NSNamespace::GetReinforcementTransferNeuron(nbrPos);
+				if (neuron > 0)
 				{
+					neuron->TransferMotivation(this, motivation);
+					if (2 == abs(unitVectorToNeighbour.m_posX) + abs(unitVectorToNeighbour.m_posY))
+					{ // diagonal
+						//uint32_t neighbourIndex2 = GetCellTransferIndex(PPh::VectorInt32Math(unitVectorToNeighbour.m_posX, 0, 0));
+						//uint32_t neighbourIndex3 = GetCellTransferIndex(PPh::VectorInt32Math(0, unitVectorToNeighbour.m_posY, 0));
+					}
 				}
-				uint32_t neighbourIndex = GetCellTransferIndex(unitVector);
-				if (2 == abs(unitVector.m_posX) + abs(unitVector.m_posY))
-				{ // diagonal
-					uint32_t neighbourIndex2 = GetCellTransferIndex(PPh::VectorInt32Math(unitVector.m_posX, 0, 0));
-					uint32_t neighbourIndex3 = GetCellTransferIndex(PPh::VectorInt32Math(0, unitVector.m_posY, 0));
-				}
+				//uint32_t neighbourIndex = GetCellTransferIndex(unitVector);
 			}
 		}
 	}
 
+}
+
+void ReinforcementTransferNeuron::TransferMotivation(ReinforcementTransferNeuron* neighbour, uint32_t motivation)
+{
+	assert((uint64_t)motivation * TRANSFER_MOTIVATION_REDUCING < std::numeric_limits<uint32_t>.max());
+	PPh::VectorInt32Math unitVector = m_pos3D - neighbour->GetPosition();
+	uint32_t transferIndex = GetCellTransferIndex(unitVector);
+
+	int isTimeEven = (NSNamespace::GetNSTime() + 1) % 2;
+	m_transferMotivation[transferIndex][isTimeEven] = motivation * TRANSFER_MOTIVATION_REDUCING / 1000;
 }

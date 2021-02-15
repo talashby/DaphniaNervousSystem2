@@ -8,6 +8,7 @@
 class Neuron;
 class Synapse;
 class ConditionedReflexCreatorNeuron;
+class ReinforcementTransferNeuron;
 
 typedef std::vector<Synapse> SynapseVector;
 
@@ -16,6 +17,7 @@ namespace NSNamespace
 	uint32_t GetNeuronIndex(Neuron *neuron);
 	uint64_t GetNSTime();
 	Neuron* GetNeuronInterface(uint32_t neuronId);
+	ReinforcementTransferNeuron* GetReinforcementTransferNeuron(const PPh::VectorInt32Math &pos);
 }
 
 class NervousSystem

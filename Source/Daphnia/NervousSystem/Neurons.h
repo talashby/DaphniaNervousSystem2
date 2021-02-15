@@ -223,7 +223,12 @@ public:
 	uint8_t GetType() override { return GetTypeStatic(); }
 
 	void Tick() override;
+	
+	PPh::VectorInt32Math GetPosition() const { return m_pos3D; }
+
 private:
+	void TransferMotivation(ReinforcementTransferNeuron* neighbour, uint32_t motivation);
+
 	PremotorNeuron *m_premotorNeuron;
 	PPh::VectorInt32Math m_pos3D;
 	std::array <TransferMotivationArray, 2> m_transferMotivation;

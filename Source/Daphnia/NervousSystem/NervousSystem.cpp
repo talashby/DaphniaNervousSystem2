@@ -114,6 +114,15 @@ namespace NSNamespace
 		assert(((uint64_t*)neuron)[0] > 0); // virtual table should exist
 		return neuron;
 	}
+
+	ReinforcementTransferNeuron* GetReinforcementTransferNeuron(const PPh::VectorInt32Math &pos)
+	{
+		assert(pos.m_posX >= 0 && pos.m_posX < s_brain.size());
+		assert(pos.m_posY >= 0 && pos.m_posY < s_brain[0].size());
+		assert(pos.m_posZ >= 0 && pos.m_posZ < s_brain[0][0].size());
+		return s_brain[pos.m_posX][pos.m_posY][pos.m_posZ];
+	}
+
 }
 
 void NervousSystemThread(uint32_t threadNum);
