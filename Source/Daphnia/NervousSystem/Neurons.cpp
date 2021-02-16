@@ -372,9 +372,12 @@ void ReinforcementTransferNeuron::Tick()
 	assert(false);
 	uint64_t time = NSNamespace::GetNSTime();
 	int isTimeOdd = time % 2;
+	m_internalMotivation = 0;
 	for (int ii = 0; ii < m_transferMotivation[0].size(); ++ii)
 	{
 		uint32_t motivation = m_transferMotivation[isTimeOdd][ii];
+		m_internalMotivation += motivation;
+		m_transferMotivation[isTimeOdd][ii] = 0;
 		if (motivation > 0)
 		{
 			PPh::VectorInt32Math unitVectorToNeighbour = GetUnitVectorFromCellTransferIndex(ii);

@@ -232,4 +232,5 @@ private:
 	PremotorNeuron *m_premotorNeuron;
 	PPh::VectorInt32Math m_pos3D;
 	std::array <TransferMotivationArray, 2> m_transferMotivation;
+	uint32_t m_internalMotivation = 0;
 };
