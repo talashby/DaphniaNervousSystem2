@@ -203,6 +203,7 @@ void NervousSystem::Init()
 					xLength = 4;
 				}
 				SynapseVector synapses = CreateSynapses(xPos, yPos, xLength, yLength);
+				assert(index < s_eyeGeneralizationNetwork.size());
 				s_eyeGeneralizationNetwork[index].InitExplicit(synapses);
 				xPos += xLength;
 				++index;
@@ -244,7 +245,7 @@ void NervousSystem::Init()
 			s_premotorNewnessNetwork[ii].InitExplicit(std::move(synapses), CreateMotorSynapses());
 			uint32_t xx = 1 + ii / c_eyeGeneralizationNetworkOneSideSize;
 			uint32_t yy = 1 + ii % c_eyeGeneralizationNetworkOneSideSize;
-			s_reinforcementTransferNewnessNetwork[ii].InitExplicit(&s_premotorNewnessNetwork[ii], PPh::VectorInt32Math(xx, yy, c_reinforcementTransferNewnessPosZ));
+			s_reinforcementTransferNewnessNetwork[ii].InitExplicit(&s_eyeGeneralizationNetwork[ii], &s_premotorNewnessNetwork[ii], PPh::VectorInt32Math(xx, yy, c_reinforcementTransferNewnessPosZ));
 			s_brain[xx][yy][c_reinforcementTransferNewnessPosZ] = &s_reinforcementTransferNewnessNetwork[ii];
 		}
 	}

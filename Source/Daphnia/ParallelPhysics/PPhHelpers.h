@@ -152,6 +152,18 @@ namespace PPh
 	int32_t Rand32(int32_t iRandMax);
 
 	template<class T>
+	T ProbabilisticDivision(T dividend, T divider) // if result of integral devision is zero sometimes returns 1
+	{
+		T result = dividend / divider;
+		if (!result)
+		{
+			T reverse = divider / dividend;
+			result = 0 == Rand32(reverse);
+		}
+		return result;
+	}
+
+	template<class T>
 	__forceinline int Sign(T x)
 	{
 		return (x > 0) - (x < 0);

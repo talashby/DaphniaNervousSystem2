@@ -68,8 +68,7 @@ uint32_t Neuron::GetId()
 
 bool Neuron::IsActive() const
 {
-	assert(false);
-	return false;
+	return ReadAxon() > 0;
 }
 
 void SensoryNeuron::Init()
@@ -336,8 +335,14 @@ void PremotorNeuron::Tick()
 	m_motorSynapses[m_activatedSynapseIndex].TransferIrritation(m_axon[isTimeOdd]);
 }
 
-void ReinforcementTransferNeuron::InitExplicit(PremotorNeuron *premotorNeuron, const PPh::VectorInt32Math &pos3D)
+void PremotorNeuron::AddReinforcement(uint32_t reinforcement)
 {
+	throw std::logic_error("The method or operation is not implemented.");
+}
+
+void ReinforcementTransferNeuron::InitExplicit(const Neuron *reinforceActivator, PremotorNeuron *premotorNeuron, const PPh::VectorInt32Math &pos3D)
+{
+	m_reinforcementActivator = reinforceActivator;
 	m_premotorNeuron = premotorNeuron;
 	m_pos3D = pos3D;
 	m_transferMotivation[0].fill({});
@@ -411,6 +416,34 @@ void ReinforcementTransferNeuron::Tick()
 				}
 			}
 		}
+	}
+	if (m_reinforcementActivator->IsActive())
+	{ // send reinforcement
+		std::vector<PremotorNeuron*> neighbourPremotorNeurons;
+		for (int ii = 0; ii < m_transferMotivation[0].size(); ++ii)
+		{
+			PPh::VectorInt32Math unitVectorToNeighbour = GetUnitVectorFromCellTransferIndex(ii);
+			PPh::VectorInt32Math nbrPos = m_pos3D + unitVectorToNeighbour;
+			ReinforcementTransferNeuron *neuron = NSNamespace::GetReinforcementTransferNeuron(nbrPos);
+			if (neuron->GetPremotorNeuron()->IsActive())
+			{
+				neighbourPremotorNeurons.push_back(neuron->GetPremotorNeuron());
+			}
+		}
+		uint32_t devidendReinforcement = m_reinforcement;
+		if (m_reinforcementActivator->ReadAxon() < m_reinforcement)
+		{
+			devidendReinforcement = m_reinforcementActivator->ReadAxon();
+		}
+		for (PremotorNeuron* premotorNeuron : neighbourPremotorNeurons)
+		{
+			premotorNeuron->AddReinforcement(devidendReinforcement / neighbourPremotorNeurons.size());
+		}
+		m_reinforcement -= devidendReinforcement;
+	}
+	else
+	{ // increase reinforcement potential
+		m_reinforcement += PPh::ProbabilisticDivision(m_internalMotivation, SECOND_IN_QUANTS * 10);
 	}
 }
 

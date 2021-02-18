@@ -8,8 +8,8 @@
 #include <memory>
 
 constexpr uint32_t SECOND_IN_QUANTS = PPh::CommonParams::QUANTUM_OF_TIME_PER_SECOND;  // quantum of time
-constexpr uint32_t MILLISECOND_IN_QUANTS = PPh::CommonParams::QUANTUM_OF_TIME_PER_SECOND / 1000;  // quantum of time
-constexpr uint32_t IRRITATION_MULTIPLIER = 1'000; // purpose is convenient work with integral numbers
+constexpr uint32_t MILLISECOND_IN_QUANTS = PPh::CommonParams::QUANTUM_OF_TIME_PER_SECOND / 1'000;  // quantum of time
+constexpr uint32_t IRRITATION_MULTIPLIER = 1'000; // purpose: convenient work with integral numbers
 constexpr uint32_t FADING_VAL = IRRITATION_MULTIPLIER / MILLISECOND_IN_QUANTS;
 
 class Synapse
@@ -202,6 +202,7 @@ public:
 	uint8_t GetType() override { return GetTypeStatic(); }
 
 	void Tick() override;
+	void AddReinforcement(uint32_t reinforcement);
 private:
 	SynapseVector m_synapses;
 	MotorSynapseVector m_motorSynapses;
@@ -217,7 +218,7 @@ public:
 	ReinforcementTransferNeuron() = default;
 	virtual ~ReinforcementTransferNeuron() = default;
 
-	void InitExplicit(PremotorNeuron *premotorNeuron, const PPh::VectorInt32Math &pos3D);
+	void InitExplicit(const Neuron *reinforcementActivator, PremotorNeuron *premotorNeuron, const PPh::VectorInt32Math &pos3D);
 
 	constexpr static uint8_t GetTypeStatic() { return static_cast<uint8_t>(NeuronTypes::ReinforcementTransferNeuron); }
 	uint8_t GetType() override { return GetTypeStatic(); }
@@ -225,6 +226,7 @@ public:
 	void Tick() override;
 	
 	PPh::VectorInt32Math GetPosition() const { return m_pos3D; }
+	PremotorNeuron* GetPremotorNeuron() const { return m_premotorNeuron; }
 
 private:
 	void TransferMotivation(ReinforcementTransferNeuron* neighbour, uint32_t motivation);
@@ -233,4 +235,6 @@ private:
 	PPh::VectorInt32Math m_pos3D;
 	std::array <TransferMotivationArray, 2> m_transferMotivation;
 	uint32_t m_internalMotivation = 0;
+	uint32_t m_reinforcement = 0;
+	const Neuron *m_reinforcementActivator = 0;
 };
