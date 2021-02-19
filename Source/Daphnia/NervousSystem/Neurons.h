@@ -24,16 +24,28 @@ private:
 
 typedef std::vector<Synapse> SynapseVector;
 
+class InhibitorSynapse
+{
+public:
+	InhibitorSynapse(class Neuron *to);
+	void Inhibit(uint32_t val);
+private:
+	class Neuron *m_to;
+};
+
 class MotorSynapse
 {
 public:
 	MotorSynapse(class MotorNeuron *to);
-	uint32_t GetWeight() const;
+
 	bool IsActive() const;
-	void TransferIrritation(uint32_t irritation) const; // transfer irritation to motor neuron dendrite
+	uint32_t GetWeight() const;
+	void AddWeight(uint32_t weight);
+	void TransferExcitation(uint32_t excitation) const; // transfer irritation to motor neuron dendrite
+	void HalfWeight();
 private:
 	class MotorNeuron *m_to;
-	uint32_t m_weight = 1000;
+	uint32_t m_weight = EXCITATION_MULTIPLIER;
 };
 
 typedef std::vector<MotorSynapse> MotorSynapseVector;
@@ -52,6 +64,8 @@ public:
 
 	virtual uint8_t GetType() = 0;
 	uint32_t GetId();
+
+	virtual void Inhibit(uint32_t) {};
 
 protected:
 	enum class NeuronTypes
@@ -134,16 +148,19 @@ public:
 	constexpr static uint8_t GetTypeStatic() { return static_cast<uint8_t>(NeuronTypes::MotorNeuron); }
 	uint8_t GetType() override { return GetTypeStatic(); }
 	void Init() override;
+	void InitExplicit(const std::shared_ptr<InhibitorSynapse> &inhibitorSynapses);
 
 	bool IsActive() const override;
 
 	void Tick() override;
 
-	void AddIrritationToDendrite(uint16_t addedIrritation);
+	void Inhibit(uint32_t addedInhibition) override;
+	void AddExcitationToDendrite(uint16_t addedExcitation);
 private:
-	std::atomic<uint32_t> m_dendrite[2]; // 0-254 - excitation 255 - connection lost
-	uint8_t m_axon[2]; // 0-254 - excitation 255 - connection lost
+	std::atomic<uint32_t> m_dendrite[2]; 
+	std::atomic<uint32_t> m_inhibitor[2];
 	bool m_isActive[2];
+	std::shared_ptr<InhibitorSynapse> m_inhibitorSynapse;
 };
 
 class SimpleAdderNeuron : public Neuron
@@ -213,11 +230,11 @@ private:
 
 typedef std::array<uint32_t, 8> TransferMotivationArray; // left, right, up, down and diagonals
 
-class ReinforcementTransferNeuron : public Neuron
+class MotivationTransferNeuron : public Neuron
 {
 public:
-	ReinforcementTransferNeuron() = default;
-	virtual ~ReinforcementTransferNeuron() = default;
+	MotivationTransferNeuron() = default;
+	virtual ~MotivationTransferNeuron() = default;
 
 	void InitExplicit(const Neuron *reinforcementActivator, PremotorNeuron *premotorNeuron, const PPh::VectorInt32Math &pos3D);
 
@@ -229,25 +246,27 @@ public:
 	PPh::VectorInt32Math GetPosition() const { return m_pos3D; }
 	PremotorNeuron* GetPremotorNeuron() const { return m_premotorNeuron; }
 
-	void SetCentralMotivation(uint32_t m_motivation);
+	void SetCentralMotivationSource(uint32_t m_motivation); // this neuron is the source of motivation. Will transfer it in all directions, but not on itself.
 private:
-	void TransferMotivation(ReinforcementTransferNeuron* neighbour, uint32_t motivation);
+	void TransferMotivation(MotivationTransferNeuron* neighbour, uint32_t motivation);
+	void TransferCentralMotivation(uint32_t m_motivation); // same as TransferMotivation but transfer in all directions.
 
 	PremotorNeuron *m_premotorNeuron;
 	PPh::VectorInt32Math m_pos3D;
 	std::array <TransferMotivationArray, 2> m_transferMotivation;
+	uint32_t m_transferCentralMotivation[2] = { 0,0 }; // same as m_transferMotivation but transfer in all directions.
 	uint32_t m_reinforcement = 0;
 	const Neuron *m_reinforcementActivator = 0;
-	uint32_t m_CentralMotivation[2] = { 0,0 };
+	uint32_t m_CentralMotivationSource[2] = { 0,0 }; // this neuron is the source of motivation. Will transfer it in all directions, but not on itself.
 };
 
-class ReinforcementSourceNeuron : public Neuron
+class MotivationSourceNeuron : public Neuron
 {
 public:
-	ReinforcementSourceNeuron() = default;
-	virtual ~ReinforcementSourceNeuron() = default;
+	MotivationSourceNeuron() = default;
+	virtual ~MotivationSourceNeuron() = default;
 
-	void InitExplicit(ReinforcementTransferNeuron *reinforcementTransferNeuron, uint32_t motivation);
+	void InitExplicit(MotivationTransferNeuron *reinforcementTransferNeuron, uint32_t motivation);
 
 	constexpr static uint8_t GetTypeStatic() { return static_cast<uint8_t>(NeuronTypes::ReinforcementSourceNeuron); }
 	uint8_t GetType() override { return GetTypeStatic(); }
@@ -256,6 +275,6 @@ public:
 
 private:
 
-	ReinforcementTransferNeuron *m_reinforcementTransferNeuron;
+	MotivationTransferNeuron *m_reinforcementTransferNeuron;
 	uint32_t m_motivation = 0;
 };
