@@ -43,6 +43,7 @@ constexpr static int EYE_COLOR_NEURONS_NUM =  PPh::GetObserverEyeSize()*PPh::Get
 static std::array<std::array<SensoryNeuron, PPh::GetObserverEyeSize()>, PPh::GetObserverEyeSize()> s_eyeNetwork;
 static std::array<SimpleAdderNeuron, 25> s_eyeGeneralizationNetwork;
 static std::array<ReinforcementTransferNeuron, s_eyeGeneralizationNetwork.size() /* same size */> s_reinforcementTransferNewnessNetwork;
+static std::array<ReinforcementSourceNeuron, s_reinforcementTransferNewnessNetwork.size() /* same size */> s_ReinforcementSourceNewnessNetwork;
 static std::array<PremotorNeuron, s_eyeGeneralizationNetwork.size() /* same size */> s_premotorNewnessNetwork;
 static std::array<ReinforcementTransferNeuron, s_eyeGeneralizationNetwork.size() /* same size */> s_reinforcementTransferHungerNetwork;
 static EmptinessActivatorNeuron s_emptinessActivatorNeuron;
@@ -247,6 +248,13 @@ void NervousSystem::Init()
 			uint32_t yy = 1 + ii % c_eyeGeneralizationNetworkOneSideSize;
 			s_reinforcementTransferNewnessNetwork[ii].InitExplicit(&s_eyeGeneralizationNetwork[ii], &s_premotorNewnessNetwork[ii], PPh::VectorInt32Math(xx, yy, c_reinforcementTransferNewnessPosZ));
 			s_brain[xx][yy][c_reinforcementTransferNewnessPosZ] = &s_reinforcementTransferNewnessNetwork[ii];
+		}
+	}
+
+	{	// init Reinforcement Source newness network
+		for (uint32_t ii = 0; ii < s_ReinforcementSourceNewnessNetwork.size(); ++ii)
+		{
+			s_ReinforcementSourceNewnessNetwork[ii].InitExplicit(&s_reinforcementTransferNewnessNetwork[ii], 50'000);
 		}
 	}
 

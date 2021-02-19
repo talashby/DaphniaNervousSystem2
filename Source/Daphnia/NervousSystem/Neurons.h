@@ -9,8 +9,8 @@
 
 constexpr uint32_t SECOND_IN_QUANTS = PPh::CommonParams::QUANTUM_OF_TIME_PER_SECOND;  // quantum of time
 constexpr uint32_t MILLISECOND_IN_QUANTS = PPh::CommonParams::QUANTUM_OF_TIME_PER_SECOND / 1'000;  // quantum of time
-constexpr uint32_t IRRITATION_MULTIPLIER = 1'000; // purpose: convenient work with integral numbers
-constexpr uint32_t FADING_VAL = IRRITATION_MULTIPLIER / MILLISECOND_IN_QUANTS;
+constexpr uint32_t EXCITATION_MULTIPLIER = 1'000; // purpose: convenient work with integral numbers
+constexpr uint32_t FADING_VAL = EXCITATION_MULTIPLIER / MILLISECOND_IN_QUANTS;
 
 class Synapse
 {
@@ -65,7 +65,8 @@ protected:
 		SimpleAdderNeuron,
 		EmptinessActivatorNeuron,
 		PremotorNeuron,
-		ReinforcementTransferNeuron
+		ReinforcementTransferNeuron,
+		ReinforcementSourceNeuron
 	};
 };
 
@@ -79,7 +80,7 @@ public:
 
 	bool IsActive() const override;
 	uint32_t ReadAxon() const override;
-	void WriteDendrite(uint8_t exitation);
+	void WriteDendrite(uint8_t excitation);
 	constexpr static uint8_t GetTypeStatic() { return static_cast<uint8_t>(NeuronTypes::SensoryNeuron); }
 	uint8_t GetType() override { return GetTypeStatic(); }
 
@@ -228,13 +229,33 @@ public:
 	PPh::VectorInt32Math GetPosition() const { return m_pos3D; }
 	PremotorNeuron* GetPremotorNeuron() const { return m_premotorNeuron; }
 
+	void SetCentralMotivation(uint32_t m_motivation);
 private:
 	void TransferMotivation(ReinforcementTransferNeuron* neighbour, uint32_t motivation);
 
 	PremotorNeuron *m_premotorNeuron;
 	PPh::VectorInt32Math m_pos3D;
 	std::array <TransferMotivationArray, 2> m_transferMotivation;
-	uint32_t m_internalMotivation = 0;
 	uint32_t m_reinforcement = 0;
 	const Neuron *m_reinforcementActivator = 0;
+	uint32_t m_CentralMotivation[2] = { 0,0 };
+};
+
+class ReinforcementSourceNeuron : public Neuron
+{
+public:
+	ReinforcementSourceNeuron() = default;
+	virtual ~ReinforcementSourceNeuron() = default;
+
+	void InitExplicit(ReinforcementTransferNeuron *reinforcementTransferNeuron, uint32_t motivation);
+
+	constexpr static uint8_t GetTypeStatic() { return static_cast<uint8_t>(NeuronTypes::ReinforcementSourceNeuron); }
+	uint8_t GetType() override { return GetTypeStatic(); }
+
+	void Tick() override;
+
+private:
+
+	ReinforcementTransferNeuron *m_reinforcementTransferNeuron;
+	uint32_t m_motivation = 0;
 };

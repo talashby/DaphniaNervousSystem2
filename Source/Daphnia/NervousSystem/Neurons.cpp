@@ -84,13 +84,13 @@ bool SensoryNeuron::IsActive() const
 uint32_t SensoryNeuron::ReadAxon() const
 {
 	int isTimeEven = (NSNamespace::GetNSTime() + 1) % 2;
-	return m_axon[isTimeEven];
+	return m_axon[isTimeEven] * EXCITATION_MULTIPLIER;
 }
 
-void SensoryNeuron::WriteDendrite(uint8_t exitation)
+void SensoryNeuron::WriteDendrite(uint8_t excitation)
 {
 	int isTimeEven = (NSNamespace::GetNSTime() + 1) % 2;
-	m_dendrite[isTimeEven] = exitation;
+	m_dendrite[isTimeEven] = excitation;
 }
 
 void SensoryNeuron::Tick()
@@ -133,10 +133,10 @@ bool MotorNeuron::IsActive() const
 void MotorNeuron::Tick()
 {
 	int isTimeOdd = NSNamespace::GetNSTime() % 2;
-	uint32_t irritation = m_dendrite[isTimeOdd];
+	uint32_t excitation = m_dendrite[isTimeOdd];
 	m_dendrite[isTimeOdd] = 0;
 	bool isActive = false;
-	if (irritation)
+	if (excitation)
 	{
 		isActive = true;
 		uint32_t index = NSNamespace::GetNeuronIndex(this);
@@ -264,7 +264,7 @@ bool EmptinessActivatorNeuron::IsActive() const
 uint32_t EmptinessActivatorNeuron::ReadAxon() const
 {
 	int isTimeEven = (NSNamespace::GetNSTime() + 1) % 2;
-	return m_isActive[isTimeEven] * 1000 * IRRITATION_MULTIPLIER;
+	return m_isActive[isTimeEven] * 1000 * EXCITATION_MULTIPLIER;
 }
 
 void PremotorNeuron::InitExplicit(SynapseVector &&synapses, MotorSynapseVector &&motorSynapses)
@@ -377,11 +377,22 @@ void ReinforcementTransferNeuron::Tick()
 	assert(false);
 	uint64_t time = NSNamespace::GetNSTime();
 	int isTimeOdd = time % 2;
-	m_internalMotivation = 0;
+	uint32_t wholeMotivation = 0;
+	if (m_CentralMotivation[isTimeOdd] > 0)
+	{
+		wholeMotivation += m_CentralMotivation[isTimeOdd];
+		for (int ii = 0; ii < m_transferMotivation[0].size(); ++ii)
+		{
+			PPh::VectorInt32Math unitVectorToNeighbour = GetUnitVectorFromCellTransferIndex(ii);
+			PPh::VectorInt32Math nbrPos = m_pos3D + unitVectorToNeighbour;
+			ReinforcementTransferNeuron *neuron = NSNamespace::GetReinforcementTransferNeuron(nbrPos);
+			neuron->TransferMotivation(this, m_CentralMotivation[isTimeOdd]);
+		}
+	}
 	for (int ii = 0; ii < m_transferMotivation[0].size(); ++ii)
 	{
 		uint32_t motivation = m_transferMotivation[isTimeOdd][ii];
-		m_internalMotivation += motivation;
+		wholeMotivation += motivation;
 		m_transferMotivation[isTimeOdd][ii] = 0;
 		if (motivation > 0)
 		{
@@ -443,8 +454,18 @@ void ReinforcementTransferNeuron::Tick()
 	}
 	else
 	{ // increase reinforcement potential
-		m_reinforcement += PPh::ProbabilisticDivision(m_internalMotivation, SECOND_IN_QUANTS * 10);
+		m_reinforcement += PPh::ProbabilisticDivision(wholeMotivation, SECOND_IN_QUANTS * 10);
+		if (m_reinforcement > wholeMotivation)
+		{
+			m_reinforcement = wholeMotivation;
+		}
 	}
+}
+
+void ReinforcementTransferNeuron::SetCentralMotivation(uint32_t m_motivation)
+{
+	int isTimeEven = (NSNamespace::GetNSTime() + 1) % 2;
+	m_CentralMotivation[isTimeEven] = m_motivation;
 }
 
 void ReinforcementTransferNeuron::TransferMotivation(ReinforcementTransferNeuron* neighbour, uint32_t motivation)
@@ -454,5 +475,16 @@ void ReinforcementTransferNeuron::TransferMotivation(ReinforcementTransferNeuron
 	uint32_t transferIndex = GetCellTransferIndex(unitVector);
 
 	int isTimeEven = (NSNamespace::GetNSTime() + 1) % 2;
-	m_transferMotivation[transferIndex][isTimeEven] = motivation * TRANSFER_MOTIVATION_REDUCING / 1000;
+	m_transferMotivation[transferIndex][isTimeEven] += motivation * TRANSFER_MOTIVATION_REDUCING / 1000;
+}
+
+void ReinforcementSourceNeuron::InitExplicit(ReinforcementTransferNeuron *reinforcementTransferNeuron, uint32_t motivation)
+{
+	m_reinforcementTransferNeuron = reinforcementTransferNeuron;
+	m_motivation = motivation;
+}
+
+void ReinforcementSourceNeuron::Tick()
+{
+	m_reinforcementTransferNeuron->SetCentralMotivation(m_motivation);
 }
