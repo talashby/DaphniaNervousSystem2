@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <cassert>
 
 namespace PPh
 {
@@ -154,8 +155,9 @@ namespace PPh
 	template<class T>
 	T ProbabilisticDivision(T dividend, T divider) // if result of integral devision is zero sometimes returns 1
 	{
+		assert(divider > 0);
 		T result = dividend / divider;
-		if (!result)
+		if (!result && dividend > 0)
 		{
 			T reverse = divider / dividend;
 			result = 0 == Rand32(reverse);

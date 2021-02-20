@@ -314,7 +314,9 @@ uint32_t EmptinessActivatorNeuron::ReadAxon() const
 
 void PremotorNeuron::InitExplicit(SynapseVector &&synapses, MotorSynapseVector &&motorSynapses)
 {
+	assert(synapses.size());
 	m_synapses = std::move(synapses);
+	assert(motorSynapses.size());
 	m_motorSynapses = std::move(motorSynapses);
 }
 
@@ -441,7 +443,10 @@ void MotivationTransferNeuron::Tick()
 			PPh::VectorInt32Math unitVectorToNeighbour = GetUnitVectorFromCellTransferIndex(ii);
 			PPh::VectorInt32Math nbrPos = m_pos3D + unitVectorToNeighbour;
 			MotivationTransferNeuron *neuron = NSNamespace::GetReinforcementTransferNeuron(nbrPos);
-			neuron->TransferMotivation(this, m_CentralMotivationSource[isTimeOdd]);
+			if (neuron)
+			{
+				neuron->TransferMotivation(this, m_CentralMotivationSource[isTimeOdd]);
+			}
 		}
 	}
 
@@ -455,7 +460,10 @@ void MotivationTransferNeuron::Tick()
 			PPh::VectorInt32Math unitVectorToNeighbour = GetUnitVectorFromCellTransferIndex(ii);
 			PPh::VectorInt32Math nbrPos = m_pos3D + unitVectorToNeighbour;
 			MotivationTransferNeuron *neuron = NSNamespace::GetReinforcementTransferNeuron(nbrPos);
-			neuron->TransferMotivation(this, m_transferCentralMotivation[isTimeOdd]);
+			if (neuron)
+			{
+				neuron->TransferMotivation(this, m_transferCentralMotivation[isTimeOdd]);
+			}
 		}
 	}
 	for (int ii = 0; ii < m_transferMotivation[0].size(); ++ii)
@@ -470,7 +478,7 @@ void MotivationTransferNeuron::Tick()
 				{
 					PPh::VectorInt32Math nbrPos = m_pos3D + unitVectorToNeighbour;
 					MotivationTransferNeuron *neuron = NSNamespace::GetReinforcementTransferNeuron(nbrPos);
-					if (neuron > 0)
+					if (neuron)
 					{
 						neuron->TransferMotivation(this, motivation);
 					}
@@ -480,7 +488,7 @@ void MotivationTransferNeuron::Tick()
 					{
 						PPh::VectorInt32Math nbrPos = m_pos3D + PPh::VectorInt32Math(unitVectorToNeighbour.m_posX, 0, 0);
 						MotivationTransferNeuron *neuron = NSNamespace::GetReinforcementTransferNeuron(nbrPos);
-						if (neuron > 0)
+						if (neuron)
 						{
 							neuron->TransferMotivation(this, motivation);
 						}
@@ -488,7 +496,7 @@ void MotivationTransferNeuron::Tick()
 					{
 						PPh::VectorInt32Math nbrPos = m_pos3D + PPh::VectorInt32Math(0, unitVectorToNeighbour.m_posY, 0);
 						MotivationTransferNeuron *neuron = NSNamespace::GetReinforcementTransferNeuron(nbrPos);
-						if (neuron > 0)
+						if (neuron)
 						{
 							neuron->TransferMotivation(this, motivation);
 						}
@@ -505,7 +513,7 @@ void MotivationTransferNeuron::Tick()
 			PPh::VectorInt32Math unitVectorToNeighbour = GetUnitVectorFromCellTransferIndex(ii);
 			PPh::VectorInt32Math nbrPos = m_pos3D + unitVectorToNeighbour;
 			MotivationTransferNeuron *neuron = NSNamespace::GetReinforcementTransferNeuron(nbrPos);
-			if (neuron->GetPremotorNeuron()->IsActive())
+			if (neuron && neuron->GetPremotorNeuron()->IsActive())
 			{
 				neighbourPremotorNeurons.push_back(neuron->GetPremotorNeuron());
 			}

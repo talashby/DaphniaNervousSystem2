@@ -20,6 +20,7 @@
 // constants
 constexpr uint32_t c_eyeGeneralizationNetworkOneSideSize = 5;
 constexpr uint32_t c_reinforcementTransferNewnessPosZ = 10;
+constexpr uint32_t c_reinforcementTransferHungerPosZ = 20;
 
 //
 std::vector< std::vector< std::vector<MotivationTransferNeuron*> > > s_brain;
@@ -42,10 +43,11 @@ std::atomic<uint32_t> s_status; // NervousSystemStatus
 constexpr static int EYE_COLOR_NEURONS_NUM =  PPh::GetObserverEyeSize()*PPh::GetObserverEyeSize();
 static std::array<std::array<SensoryNeuron, PPh::GetObserverEyeSize()>, PPh::GetObserverEyeSize()> s_eyeNetwork;
 static std::array<SimpleAdderNeuron, 25> s_eyeGeneralizationNetwork;
-static std::array<MotivationTransferNeuron, s_eyeGeneralizationNetwork.size() /* same size */> s_reinforcementTransferNewnessNetwork;
-static std::array<MotivationSourceNeuron, s_reinforcementTransferNewnessNetwork.size() /* same size */> s_ReinforcementSourceNewnessNetwork;
+static std::array<MotivationTransferNeuron, s_eyeGeneralizationNetwork.size() /* same size */> s_motivationTransferNewnessNetwork;
+static std::array<MotivationTransferNeuron, s_eyeGeneralizationNetwork.size() /* same size */> s_motivationTransferHungerNetwork;
+static std::array<MotivationSourceNeuron, s_motivationTransferNewnessNetwork.size() /* same size */> s_motivationSourceNewnessNetwork;
 static std::array<PremotorNeuron, s_eyeGeneralizationNetwork.size() /* same size */> s_premotorNewnessNetwork;
-static std::array<MotivationTransferNeuron, s_eyeGeneralizationNetwork.size() /* same size */> s_reinforcementTransferHungerNetwork;
+static std::array<PremotorNeuron, s_eyeGeneralizationNetwork.size() /* same size */> s_premotorHungerNetwork;
 static EmptinessActivatorNeuron s_emptinessActivatorNeuron;
 static PremotorNeuron s_emptinessPremotorNeuron;
 static std::array<MotorNeuron, 3> s_motorNetwork; // 0 - forward, 1 - left, 2 - right
@@ -59,12 +61,13 @@ struct NetworksMetadata
 	uint64_t m_end;
 	uint32_t m_size;
 };
-static std::array<NetworksMetadata, 8> s_networksMetadata{
+static std::array<NetworksMetadata, 9> s_networksMetadata{
 	NetworksMetadata{0, 0, (uint64_t)(&s_eyeNetwork[0][0]), (uint64_t)(&s_eyeNetwork[0][0]+EYE_COLOR_NEURONS_NUM), sizeof(SensoryNeuron)},
 	NetworksMetadata{0, 0, (uint64_t)&s_eyeGeneralizationNetwork[0], (uint64_t)(&s_eyeGeneralizationNetwork[0] + s_eyeGeneralizationNetwork.size()), sizeof(SimpleAdderNeuron)},
-	NetworksMetadata{0, 0, (uint64_t)&s_reinforcementTransferNewnessNetwork[0], (uint64_t)(&s_reinforcementTransferNewnessNetwork[0] + s_eyeGeneralizationNetwork.size()), sizeof(MotivationTransferNeuron)},
+	NetworksMetadata{0, 0, (uint64_t)&s_motivationTransferNewnessNetwork[0], (uint64_t)(&s_motivationTransferNewnessNetwork[0] + s_eyeGeneralizationNetwork.size()), sizeof(MotivationTransferNeuron)},
+	NetworksMetadata{0, 0, (uint64_t)&s_motivationTransferHungerNetwork[0], (uint64_t)(&s_motivationTransferHungerNetwork[0] + s_eyeGeneralizationNetwork.size()), sizeof(MotivationTransferNeuron)},
 	NetworksMetadata{0, 0, (uint64_t)&s_premotorNewnessNetwork[0], (uint64_t)(&s_premotorNewnessNetwork[0] + s_eyeGeneralizationNetwork.size()), sizeof(PremotorNeuron)},
-	NetworksMetadata{0, 0, (uint64_t)&s_reinforcementTransferHungerNetwork[0], (uint64_t)(&s_reinforcementTransferHungerNetwork[0] + s_reinforcementTransferHungerNetwork.size()), sizeof(MotivationTransferNeuron)},
+	NetworksMetadata{0, 0, (uint64_t)&s_premotorHungerNetwork[0], (uint64_t)(&s_premotorHungerNetwork[0] + s_eyeGeneralizationNetwork.size()), sizeof(PremotorNeuron)},
 	NetworksMetadata{0, 0, (uint64_t)&s_emptinessActivatorNeuron, (uint64_t)(&s_emptinessActivatorNeuron + 1), sizeof(EmptinessActivatorNeuron)},
 	NetworksMetadata{0, 0, (uint64_t)&s_emptinessPremotorNeuron, (uint64_t)(&s_emptinessPremotorNeuron + 1), sizeof(PremotorNeuron)},
 	NetworksMetadata{0, 0, (uint64_t)&s_motorNetwork[0], (uint64_t)(&s_motorNetwork[0]+s_motorNetwork.size()), sizeof(MotorNeuron)}
@@ -152,7 +155,7 @@ void NervousSystem::Init()
 	uint32_t neuronsNum = s_networksMetadata[s_networksMetadata.size() - 1].m_endNeuronNum;
 	assert(neuronsNum > 0);
 	{
-		uint32_t net3dSize = s_reinforcementTransferNewnessNetwork.size() + 2;
+		uint32_t net3dSize = s_motivationTransferNewnessNetwork.size() + 2;
 		s_brain.resize(net3dSize);
 		for (auto &yArray : s_brain)
 		{
@@ -245,22 +248,31 @@ void NervousSystem::Init()
 	}
 
 	{	// init reinforcement transfer newness network
-		for (uint32_t ii = 0; ii < s_reinforcementTransferNewnessNetwork.size(); ++ii)
+		for (uint32_t ii = 0; ii < s_motivationTransferNewnessNetwork.size(); ++ii)
 		{
-			SynapseVector synapses;
-			synapses.push_back(Synapse(&s_reinforcementTransferNewnessNetwork[ii]));
-			s_premotorNewnessNetwork[ii].InitExplicit(std::move(synapses), CreateMotorSynapses());
+			{
+				SynapseVector synapses;
+				synapses.push_back(Synapse(&s_motivationTransferNewnessNetwork[ii]));
+				s_premotorNewnessNetwork[ii].InitExplicit(std::move(synapses), CreateMotorSynapses());
+			}
+			{
+				SynapseVector synapses;
+				synapses.push_back(Synapse(&s_motivationTransferHungerNetwork[ii]));
+				s_premotorHungerNetwork[ii].InitExplicit(std::move(synapses), CreateMotorSynapses());
+			}
 			uint32_t xx = 1 + ii / c_eyeGeneralizationNetworkOneSideSize;
 			uint32_t yy = 1 + ii % c_eyeGeneralizationNetworkOneSideSize;
-			s_reinforcementTransferNewnessNetwork[ii].InitExplicit(&s_eyeGeneralizationNetwork[ii], &s_premotorNewnessNetwork[ii], PPh::VectorInt32Math(xx, yy, c_reinforcementTransferNewnessPosZ));
-			s_brain[xx][yy][c_reinforcementTransferNewnessPosZ] = &s_reinforcementTransferNewnessNetwork[ii];
+			s_motivationTransferNewnessNetwork[ii].InitExplicit(&s_eyeGeneralizationNetwork[ii], &s_premotorNewnessNetwork[ii], PPh::VectorInt32Math(xx, yy, c_reinforcementTransferNewnessPosZ));
+			s_brain[xx][yy][c_reinforcementTransferNewnessPosZ] = &s_motivationTransferNewnessNetwork[ii];
+			s_motivationTransferHungerNetwork[ii].InitExplicit(&s_eyeGeneralizationNetwork[ii], &s_premotorHungerNetwork[ii], PPh::VectorInt32Math(xx, yy, c_reinforcementTransferHungerPosZ));
+			s_brain[xx][yy][c_reinforcementTransferHungerPosZ] = &s_motivationTransferHungerNetwork[ii];
 		}
 	}
 
 	{	// init Reinforcement Source newness network
-		for (uint32_t ii = 0; ii < s_ReinforcementSourceNewnessNetwork.size(); ++ii)
+		for (uint32_t ii = 0; ii < s_motivationSourceNewnessNetwork.size(); ++ii)
 		{
-			s_ReinforcementSourceNewnessNetwork[ii].InitExplicit(&s_reinforcementTransferNewnessNetwork[ii], 50'000);
+			s_motivationSourceNewnessNetwork[ii].InitExplicit(&s_motivationTransferNewnessNetwork[ii], 50'000);
 		}
 	}
 
