@@ -26,7 +26,7 @@ constexpr uint32_t c_reinforcementTransferHungerPosZ = 20;
 std::vector< std::vector< std::vector<MotivationTransferNeuron*> > > s_brain;
 
 static NervousSystem* s_nervousSystem = nullptr;
-static std::array<std::thread, 3> s_threads;
+static std::array<std::thread, 1> s_threads;
 static std::array<std::pair<uint32_t, uint32_t>, s_threads.size()> s_threadNeurons; // [first neuron; last neuron)
 static std::atomic<bool> s_isSimulationRunning = false;
 static std::atomic<uint64_t> s_time = 0; // absolute universe time
@@ -61,11 +61,12 @@ struct NetworksMetadata
 	uint64_t m_end;
 	uint32_t m_size;
 };
-static std::array<NetworksMetadata, 9> s_networksMetadata{
+static std::array<NetworksMetadata, 10> s_networksMetadata{
 	NetworksMetadata{0, 0, (uint64_t)(&s_eyeNetwork[0][0]), (uint64_t)(&s_eyeNetwork[0][0]+EYE_COLOR_NEURONS_NUM), sizeof(SensoryNeuron)},
 	NetworksMetadata{0, 0, (uint64_t)&s_eyeGeneralizationNetwork[0], (uint64_t)(&s_eyeGeneralizationNetwork[0] + s_eyeGeneralizationNetwork.size()), sizeof(SimpleAdderNeuron)},
 	NetworksMetadata{0, 0, (uint64_t)&s_motivationTransferNewnessNetwork[0], (uint64_t)(&s_motivationTransferNewnessNetwork[0] + s_eyeGeneralizationNetwork.size()), sizeof(MotivationTransferNeuron)},
 	NetworksMetadata{0, 0, (uint64_t)&s_motivationTransferHungerNetwork[0], (uint64_t)(&s_motivationTransferHungerNetwork[0] + s_eyeGeneralizationNetwork.size()), sizeof(MotivationTransferNeuron)},
+	NetworksMetadata{0, 0, (uint64_t)&s_motivationSourceNewnessNetwork[0], (uint64_t)(&s_motivationSourceNewnessNetwork[0] + s_eyeGeneralizationNetwork.size()), sizeof(MotivationSourceNeuron)},
 	NetworksMetadata{0, 0, (uint64_t)&s_premotorNewnessNetwork[0], (uint64_t)(&s_premotorNewnessNetwork[0] + s_eyeGeneralizationNetwork.size()), sizeof(PremotorNeuron)},
 	NetworksMetadata{0, 0, (uint64_t)&s_premotorHungerNetwork[0], (uint64_t)(&s_premotorHungerNetwork[0] + s_eyeGeneralizationNetwork.size()), sizeof(PremotorNeuron)},
 	NetworksMetadata{0, 0, (uint64_t)&s_emptinessActivatorNeuron, (uint64_t)(&s_emptinessActivatorNeuron + 1), sizeof(EmptinessActivatorNeuron)},
@@ -218,8 +219,24 @@ void NervousSystem::Init()
 
 	// init Motor Neurons
 	{
-		s_motorNetwork[1].InitExplicit(std::make_shared<InhibitorSynapse>(&s_motorNetwork[2])); // TODO get rid off from constants
-		s_motorNetwork[2].InitExplicit(std::make_shared<InhibitorSynapse>(&s_motorNetwork[1])); // TODO get rid off from constants
+		{
+			InhibitorSynapseVector forward;
+			forward.push_back(InhibitorSynapse(&s_motorNetwork[1], 33));
+			forward.push_back(InhibitorSynapse(&s_motorNetwork[2], 33));
+			s_motorNetwork[0].InitExplicit(std::move(forward)); // TODO get rid off from constants
+		}
+		{
+			InhibitorSynapseVector left;
+			left.push_back(InhibitorSynapse(&s_motorNetwork[0], 33));
+			left.push_back(InhibitorSynapse(&s_motorNetwork[2], 100));
+			s_motorNetwork[1].InitExplicit(std::move(left)); // TODO get rid off from constants
+		}
+		{
+			InhibitorSynapseVector right;
+			right.push_back(InhibitorSynapse(&s_motorNetwork[0], 33));
+			right.push_back(InhibitorSynapse(&s_motorNetwork[1], 100));
+			s_motorNetwork[2].InitExplicit(std::move(right)); // TODO get rid off from constants
+		}
 	}
 
 	{	// init emptinessActivatorNeuron
@@ -253,11 +270,13 @@ void NervousSystem::Init()
 			{
 				SynapseVector synapses;
 				synapses.push_back(Synapse(&s_motivationTransferNewnessNetwork[ii]));
+				synapses.push_back(Synapse(&s_eyeGeneralizationNetwork[ii]));
 				s_premotorNewnessNetwork[ii].InitExplicit(std::move(synapses), CreateMotorSynapses());
 			}
 			{
 				SynapseVector synapses;
 				synapses.push_back(Synapse(&s_motivationTransferHungerNetwork[ii]));
+				synapses.push_back(Synapse(&s_eyeGeneralizationNetwork[ii]));
 				s_premotorHungerNetwork[ii].InitExplicit(std::move(synapses), CreateMotorSynapses());
 			}
 			uint32_t xx = 1 + ii / c_eyeGeneralizationNetworkOneSideSize;
@@ -272,7 +291,7 @@ void NervousSystem::Init()
 	{	// init Reinforcement Source newness network
 		for (uint32_t ii = 0; ii < s_motivationSourceNewnessNetwork.size(); ++ii)
 		{
-			s_motivationSourceNewnessNetwork[ii].InitExplicit(&s_motivationTransferNewnessNetwork[ii], 50'000);
+			s_motivationSourceNewnessNetwork[ii].InitExplicit(&s_motivationTransferNewnessNetwork[ii], 5*EXCITATION_MULTIPLIER);
 		}
 	}
 

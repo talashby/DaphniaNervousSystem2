@@ -10,7 +10,7 @@
 constexpr uint32_t SECOND_IN_QUANTS = PPh::CommonParams::QUANTUM_OF_TIME_PER_SECOND;  // quantum of time
 constexpr uint32_t MILLISECOND_IN_QUANTS = PPh::CommonParams::QUANTUM_OF_TIME_PER_SECOND / 1'000;  // quantum of time
 constexpr uint32_t EXCITATION_MULTIPLIER = 1'000; // purpose: convenient work with integral numbers
-constexpr uint32_t FADING_VAL = EXCITATION_MULTIPLIER / MILLISECOND_IN_QUANTS;
+constexpr uint32_t FADING_VAL = 10 * EXCITATION_MULTIPLIER / MILLISECOND_IN_QUANTS;
 
 class Synapse
 {
@@ -27,11 +27,14 @@ typedef std::vector<Synapse> SynapseVector;
 class InhibitorSynapse
 {
 public:
-	InhibitorSynapse(class Neuron *to);
+	InhibitorSynapse(class Neuron *to, uint32_t percentOfInhibition);
 	void Inhibit(uint32_t val);
 private:
 	class Neuron *m_to;
+	uint32_t m_percentOfInhibition;
 };
+
+typedef std::vector<InhibitorSynapse> InhibitorSynapseVector;
 
 class MotorSynapse
 {
@@ -148,7 +151,7 @@ public:
 	constexpr static uint8_t GetTypeStatic() { return static_cast<uint8_t>(NeuronTypes::MotorNeuron); }
 	uint8_t GetType() override { return GetTypeStatic(); }
 	void Init() override;
-	void InitExplicit(const std::shared_ptr<InhibitorSynapse> &inhibitorSynapses);
+	void InitExplicit(InhibitorSynapseVector &&inhibitorSynapses);
 
 	bool IsActive() const override;
 
@@ -160,7 +163,7 @@ private:
 	std::atomic<uint32_t> m_dendrite[2]; 
 	std::atomic<uint32_t> m_inhibitor[2];
 	bool m_isActive[2];
-	std::shared_ptr<InhibitorSynapse> m_inhibitorSynapse;
+	InhibitorSynapseVector m_inhibitorSynapses;
 };
 
 class SimpleAdderNeuron : public Neuron
@@ -179,7 +182,7 @@ public:
 
 
 private:
-	uint16_t m_axon[2];
+	uint32_t m_axon[2];
 	SynapseVector m_synapses;
 };
 
@@ -220,11 +223,12 @@ public:
 	uint8_t GetType() override { return GetTypeStatic(); }
 
 	void Tick() override;
+	uint32_t ReadAxon() const override;
 	void AddReinforcement(uint32_t reinforcement);
 private:
 	SynapseVector m_synapses;
 	MotorSynapseVector m_motorSynapses;
-	uint16_t m_axon[2];
+	uint32_t m_axon[2];
 	uint32_t m_activatedSynapseIndex = 0;
 };
 
@@ -243,6 +247,7 @@ public:
 
 	void Tick() override;
 	
+	uint32_t ReadAxon() const override;
 	PPh::VectorInt32Math GetPosition() const { return m_pos3D; }
 	PremotorNeuron* GetPremotorNeuron() const { return m_premotorNeuron; }
 
@@ -258,6 +263,7 @@ private:
 	uint32_t m_reinforcement = 0;
 	const Neuron *m_reinforcementActivator = 0;
 	uint32_t m_CentralMotivationSource[2] = { 0,0 }; // this neuron is the source of motivation. Will transfer it in all directions, but not on itself.
+	uint32_t m_axon[2];
 };
 
 class MotivationSourceNeuron : public Neuron
