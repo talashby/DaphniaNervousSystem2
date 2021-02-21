@@ -19,6 +19,7 @@
 
 // constants
 constexpr uint32_t c_eyeGeneralizationNetworkOneSideSize = 5;
+constexpr uint32_t c_eyeGeneralizationNeuronCenterIndex = 12;
 constexpr uint32_t c_reinforcementTransferNewnessPosZ = 10;
 constexpr uint32_t c_reinforcementTransferHungerPosZ = 20;
 
@@ -51,6 +52,8 @@ static std::array<PremotorNeuron, s_eyeGeneralizationNetwork.size() /* same size
 static EmptinessActivatorNeuron s_emptinessActivatorNeuron;
 static PremotorNeuron s_emptinessPremotorNeuron;
 static std::array<MotorNeuron, 3> s_motorNetwork; // 0 - forward, 1 - left, 2 - right
+static ActivatorNeuron s_newnessNetworkActivatorNeuron; // 
+static HungerActivatorNeuron s_hungerNetworkActivatorNeuron;
 
 
 struct NetworksMetadata
@@ -61,7 +64,7 @@ struct NetworksMetadata
 	uint64_t m_end;
 	uint32_t m_size;
 };
-static std::array<NetworksMetadata, 10> s_networksMetadata{
+static std::array<NetworksMetadata, 12> s_networksMetadata{
 	NetworksMetadata{0, 0, (uint64_t)(&s_eyeNetwork[0][0]), (uint64_t)(&s_eyeNetwork[0][0]+EYE_COLOR_NEURONS_NUM), sizeof(SensoryNeuron)},
 	NetworksMetadata{0, 0, (uint64_t)&s_eyeGeneralizationNetwork[0], (uint64_t)(&s_eyeGeneralizationNetwork[0] + s_eyeGeneralizationNetwork.size()), sizeof(SimpleAdderNeuron)},
 	NetworksMetadata{0, 0, (uint64_t)&s_motivationTransferNewnessNetwork[0], (uint64_t)(&s_motivationTransferNewnessNetwork[0] + s_eyeGeneralizationNetwork.size()), sizeof(MotivationTransferNeuron)},
@@ -71,7 +74,9 @@ static std::array<NetworksMetadata, 10> s_networksMetadata{
 	NetworksMetadata{0, 0, (uint64_t)&s_premotorHungerNetwork[0], (uint64_t)(&s_premotorHungerNetwork[0] + s_eyeGeneralizationNetwork.size()), sizeof(PremotorNeuron)},
 	NetworksMetadata{0, 0, (uint64_t)&s_emptinessActivatorNeuron, (uint64_t)(&s_emptinessActivatorNeuron + 1), sizeof(EmptinessActivatorNeuron)},
 	NetworksMetadata{0, 0, (uint64_t)&s_emptinessPremotorNeuron, (uint64_t)(&s_emptinessPremotorNeuron + 1), sizeof(PremotorNeuron)},
-	NetworksMetadata{0, 0, (uint64_t)&s_motorNetwork[0], (uint64_t)(&s_motorNetwork[0]+s_motorNetwork.size()), sizeof(MotorNeuron)}
+	NetworksMetadata{0, 0, (uint64_t)&s_motorNetwork[0], (uint64_t)(&s_motorNetwork[0] + s_motorNetwork.size()), sizeof(MotorNeuron)},
+	NetworksMetadata{0, 0, (uint64_t)&s_newnessNetworkActivatorNeuron, (uint64_t)(&s_newnessNetworkActivatorNeuron + 1), sizeof(ActivatorNeuron)},
+	NetworksMetadata{0, 0, (uint64_t)&s_hungerNetworkActivatorNeuron, (uint64_t)(&s_hungerNetworkActivatorNeuron + 1), sizeof(HungerActivatorNeuron)}
 };
 
 namespace NSNamespace
@@ -291,8 +296,12 @@ void NervousSystem::Init()
 	{	// init Reinforcement Source newness network
 		for (uint32_t ii = 0; ii < s_motivationSourceNewnessNetwork.size(); ++ii)
 		{
-			s_motivationSourceNewnessNetwork[ii].InitExplicit(&s_motivationTransferNewnessNetwork[ii], 5*EXCITATION_MULTIPLIER);
+			s_motivationSourceNewnessNetwork[ii].InitExplicit(&s_newnessNetworkActivatorNeuron, &s_motivationTransferNewnessNetwork[ii], 5*EXCITATION_MULTIPLIER);
 		}
+	}
+
+	{
+		s_hungerNetworkActivatorNeuron.InitExplicit(&s_newnessNetworkActivatorNeuron, &s_motivationTransferHungerNetwork[c_eyeGeneralizationNeuronCenterIndex]);
 	}
 
 	s_nervousSystem = new NervousSystem();

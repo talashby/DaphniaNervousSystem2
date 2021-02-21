@@ -82,8 +82,10 @@ protected:
 		SimpleAdderNeuron,
 		EmptinessActivatorNeuron,
 		PremotorNeuron,
-		ReinforcementTransferNeuron,
-		ReinforcementSourceNeuron
+		MotivationTransferNeuron,
+		ActivatorNeuron,
+		MotivationSourceNeuron,
+		HungerActivatorNeuron
 	};
 };
 
@@ -242,7 +244,7 @@ public:
 
 	void InitExplicit(const Neuron *reinforcementActivator, PremotorNeuron *premotorNeuron, const PPh::VectorInt32Math &pos3D);
 
-	constexpr static uint8_t GetTypeStatic() { return static_cast<uint8_t>(NeuronTypes::ReinforcementTransferNeuron); }
+	constexpr static uint8_t GetTypeStatic() { return static_cast<uint8_t>(NeuronTypes::MotivationTransferNeuron); }
 	uint8_t GetType() override { return GetTypeStatic(); }
 
 	void Tick() override;
@@ -252,9 +254,9 @@ public:
 	PremotorNeuron* GetPremotorNeuron() const { return m_premotorNeuron; }
 
 	void SetCentralMotivationSource(uint32_t m_motivation); // this neuron is the source of motivation. Will transfer it in all directions, but not on itself.
+	void TransferCentralMotivation(uint32_t m_motivation); // same as TransferMotivation but transfer in all directions.
 private:
 	void TransferMotivation(MotivationTransferNeuron* neighbour, uint32_t motivation);
-	void TransferCentralMotivation(uint32_t m_motivation); // same as TransferMotivation but transfer in all directions.
 
 	PremotorNeuron *m_premotorNeuron;
 	PPh::VectorInt32Math m_pos3D;
@@ -266,21 +268,62 @@ private:
 	uint32_t m_axon[2];
 };
 
+class ActivatorNeuron : public Neuron
+{
+public:
+	ActivatorNeuron() = default;
+	virtual ~ActivatorNeuron() = default;
+
+	constexpr static uint8_t GetTypeStatic() { return static_cast<uint8_t>(NeuronTypes::ActivatorNeuron); }
+	uint8_t GetType() override { return GetTypeStatic(); }
+
+	void Tick() override;
+	void Inhibit(uint32_t) override;
+	uint32_t ReadAxon() const override;
+
+private:
+	uint32_t m_axon[2];
+	uint32_t m_inhibitor[2];
+};
+
 class MotivationSourceNeuron : public Neuron
 {
 public:
 	MotivationSourceNeuron() = default;
 	virtual ~MotivationSourceNeuron() = default;
 
-	void InitExplicit(MotivationTransferNeuron *reinforcementTransferNeuron, uint32_t motivation);
+	void InitExplicit(Neuron *activatorNeuron, MotivationTransferNeuron *motivationTransferNeuron, uint32_t motivation);
 
-	constexpr static uint8_t GetTypeStatic() { return static_cast<uint8_t>(NeuronTypes::ReinforcementSourceNeuron); }
+	constexpr static uint8_t GetTypeStatic() { return static_cast<uint8_t>(NeuronTypes::MotivationSourceNeuron); }
 	uint8_t GetType() override { return GetTypeStatic(); }
 
 	void Tick() override;
 
 private:
 
-	MotivationTransferNeuron *m_reinforcementTransferNeuron;
+	MotivationTransferNeuron *m_motivationTransferNeuron;
 	uint32_t m_motivation = 0;
+	Neuron *m_activatorNeuron;
+};
+
+class HungerActivatorNeuron : public Neuron
+{
+public:
+	HungerActivatorNeuron() = default;
+	virtual ~HungerActivatorNeuron() = default;
+
+	constexpr static uint8_t GetTypeStatic() { return static_cast<uint8_t>(NeuronTypes::HungerActivatorNeuron); }
+	uint8_t GetType() override { return GetTypeStatic(); }
+
+	void InitExplicit(Neuron *newnessActivatorNeuron, MotivationTransferNeuron *motivationTransferNeuron);
+
+	void Tick() override;
+	void CrumbEaten();
+	bool IsHunger() const;
+
+private:
+	Neuron *m_newnessActivatorNeuron;
+	MotivationTransferNeuron *m_centralMotivationTransferNeuron;
+	uint32_t m_curQuants = 0;
+	const uint32_t m_activateQuants = SECOND_IN_QUANTS*30;
 };

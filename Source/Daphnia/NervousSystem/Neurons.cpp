@@ -583,14 +583,67 @@ void MotivationTransferNeuron::TransferCentralMotivation(uint32_t m_motivation)
 	m_transferCentralMotivation[isTimeEven] = m_motivation;
 }
 
-void MotivationSourceNeuron::InitExplicit(MotivationTransferNeuron *reinforcementTransferNeuron, uint32_t motivation)
+void ActivatorNeuron::Tick()
 {
-	m_reinforcementTransferNeuron = reinforcementTransferNeuron;
+	int isTimeOdd = NSNamespace::GetNSTime() % 2;
+	m_axon[isTimeOdd] = 1;
+	if (m_inhibitor[isTimeOdd])
+	{
+		m_axon[isTimeOdd] = 0;
+	}
+	m_inhibitor[isTimeOdd] = 0;
+}
+
+void ActivatorNeuron::Inhibit(uint32_t)
+{
+	int isTimeEven = (NSNamespace::GetNSTime() + 1) % 2;
+	m_inhibitor[isTimeEven] = 1;
+}
+
+uint32_t ActivatorNeuron::ReadAxon() const
+{
+	int isTimeEven = (NSNamespace::GetNSTime() + 1) % 2;
+	return m_axon[isTimeEven];
+}
+
+void MotivationSourceNeuron::InitExplicit(Neuron *activatorNeuron, MotivationTransferNeuron *reinforcementTransferNeuron, uint32_t motivation)
+{
+	m_activatorNeuron = activatorNeuron;
+	m_motivationTransferNeuron = reinforcementTransferNeuron;
 	m_motivation = motivation;
 }
 
 void MotivationSourceNeuron::Tick()
 {
-	m_reinforcementTransferNeuron->SetCentralMotivationSource(m_motivation);
+	if (m_activatorNeuron->IsActive())
+	{
+		m_motivationTransferNeuron->SetCentralMotivationSource(m_motivation);
+	}
 }
 
+void HungerActivatorNeuron::InitExplicit(Neuron *newnessActivatorNeuron, MotivationTransferNeuron *motivationTransferNeuron)
+{
+	m_newnessActivatorNeuron = newnessActivatorNeuron;
+	m_centralMotivationTransferNeuron = motivationTransferNeuron;
+}
+
+void HungerActivatorNeuron::Tick()
+{
+	++m_curQuants;
+	if (m_curQuants > m_activateQuants)
+	{
+		--m_curQuants;
+		m_newnessActivatorNeuron->Inhibit(1);
+		m_centralMotivationTransferNeuron->TransferCentralMotivation(EXCITATION_MULTIPLIER*1000);
+	}
+
+}
+
+void HungerActivatorNeuron::CrumbEaten()
+{
+}
+
+bool HungerActivatorNeuron::IsHunger() const
+{
+	return false;
+}
