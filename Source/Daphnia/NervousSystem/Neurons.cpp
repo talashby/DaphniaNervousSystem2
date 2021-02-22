@@ -364,25 +364,31 @@ void PremotorNeuron::Tick()
 				++index;
 			}
 		}
-	}
-
-	if (excitation < m_axon[isTimeOdd])
-	{
-		if (m_axon[isTimeOdd] > FADING_VAL)
+		if (excitation < m_excitationMax)
 		{
-			m_axon[isTimeOdd] -= FADING_VAL;
+			if (m_axon[isTimeOdd] > FADING_VAL)
+			{
+				m_axon[isTimeOdd] -= FADING_VAL;
+			}
+			else
+			{
+				m_axon[isTimeOdd] = 0;
+				m_excitationMax = 0;
+			}
 		}
 		else
 		{
-			m_axon[isTimeOdd] = 0;
+			m_axon[isTimeOdd] = excitation;
+			m_excitationMax = excitation;
 		}
+
+		m_motorSynapses[m_activatedSynapseIndex].TransferExcitation(m_axon[isTimeOdd]);
 	}
 	else
 	{
-		m_axon[isTimeOdd] = excitation;
+		m_axon[isTimeOdd] = 0;
+		m_excitationMax = 0;
 	}
-
-	m_motorSynapses[m_activatedSynapseIndex].TransferExcitation(m_axon[isTimeOdd]);
 }
 
 uint32_t PremotorNeuron::ReadAxon() const
@@ -634,7 +640,18 @@ void HungerActivatorNeuron::Tick()
 	{
 		--m_curQuants;
 		m_newnessActivatorNeuron->Inhibit(1);
-		m_centralMotivationTransferNeuron->TransferCentralMotivation(EXCITATION_MULTIPLIER*1000);
+		m_centralMotivationTransferNeuron->TransferCentralMotivation(EXCITATION_MULTIPLIER);
+
+		uint32_t crumbNum = PPh::ObserverClient::Instance()->GetEatenCrumbNum();
+		if (crumbNum > m_eatenCrumbNum)
+		{
+			m_eatenCrumbNum = crumbNum;
+			PremotorNeuron *premotorNeuron = m_centralMotivationTransferNeuron->GetPremotorNeuron();
+			if (premotorNeuron)
+			{
+				premotorNeuron->AddReinforcement(EXCITATION_MULTIPLIER);
+			}
+		}
 	}
 
 }

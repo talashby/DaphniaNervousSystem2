@@ -63,6 +63,7 @@ public:
 		uint64_t &outServerTime,
 		uint64_t &outClientTime) const;
 
+	uint32_t GetEatenCrumbNum() const { return m_eatenCrumbNum; }
 	uint32_t GetServerProtocolVersion() const;
 
 	// Set motor neurons
@@ -102,7 +103,7 @@ private:
 	int16_t m_longitude = 0;
 	VectorInt32Math m_position = VectorInt32Math::ZeroVector;
 	uint16_t m_movingProgress = 0;
-	uint32_t m_eatenCrumbNum = 0;
+	std::atomic <uint32_t> m_eatenCrumbNum = 0;
 	bool m_isEatenCrumb = false;
 	VectorInt32Math m_eatenCrumbPos = VectorInt32Math::ZeroVector;
 

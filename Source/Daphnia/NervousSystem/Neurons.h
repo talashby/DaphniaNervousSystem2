@@ -10,7 +10,7 @@
 constexpr uint32_t SECOND_IN_QUANTS = PPh::CommonParams::QUANTUM_OF_TIME_PER_SECOND;  // quantum of time
 constexpr uint32_t MILLISECOND_IN_QUANTS = PPh::CommonParams::QUANTUM_OF_TIME_PER_SECOND / 1'000;  // quantum of time
 constexpr uint32_t EXCITATION_MULTIPLIER = 1'000; // purpose: convenient work with integral numbers
-constexpr uint32_t FADING_VAL = 10 * EXCITATION_MULTIPLIER / MILLISECOND_IN_QUANTS;
+constexpr uint32_t FADING_VAL = EXCITATION_MULTIPLIER / MILLISECOND_IN_QUANTS;
 
 class Synapse
 {
@@ -232,6 +232,7 @@ private:
 	MotorSynapseVector m_motorSynapses;
 	uint32_t m_axon[2];
 	uint32_t m_activatedSynapseIndex = 0;
+	uint32_t m_excitationMax = 0;
 };
 
 typedef std::array<uint32_t, 8> TransferMotivationArray; // left, right, up, down and diagonals
@@ -326,4 +327,5 @@ private:
 	MotivationTransferNeuron *m_centralMotivationTransferNeuron;
 	uint32_t m_curQuants = 0;
 	const uint32_t m_activateQuants = SECOND_IN_QUANTS*30;
+	uint32_t m_eatenCrumbNum = 0;
 };
