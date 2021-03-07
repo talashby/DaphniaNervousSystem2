@@ -339,11 +339,12 @@ void PremotorNeuron::Tick()
 		excitation += synapse.ReadAxon();
 	}
 
-	if (isAllActive)
+	if (isAllActive || m_excitationMax > 0)
 	{
-		bool activated = 0 == m_axon[isTimeOdd];
+		bool activated = 0 == m_excitationMax;
 		if (activated)
 		{ // select random motor neuron
+			m_excitationTimeStart = NSNamespace::GetNSTime();
 			int32_t totalWeight = 0;
 			for (const MotorSynapse& synapse : m_motorSynapses)
 			{
@@ -364,30 +365,29 @@ void PremotorNeuron::Tick()
 				++index;
 			}
 		}
-		if (excitation < m_excitationMax)
+		if (excitation <= m_excitationMax)
 		{
-			if (m_axon[isTimeOdd] > FADING_VAL)
+			uint32_t fadingVal = FADING_VAL + 10 * FADING_VAL * (NSNamespace::GetNSTime() - m_excitationTimeStart) / SECOND_IN_QUANTS;
+			if (m_excitationMax > fadingVal)
 			{
-				m_axon[isTimeOdd] -= FADING_VAL;
+				m_excitationMax -= fadingVal;
 			}
 			else
 			{
-				m_axon[isTimeOdd] = 0;
 				m_excitationMax = 0;
 			}
 		}
 		else
 		{
-			m_axon[isTimeOdd] = excitation;
 			m_excitationMax = excitation;
 		}
+		m_axon[isTimeOdd] = m_excitationMax;
 
 		m_motorSynapses[m_activatedSynapseIndex].TransferExcitation(m_axon[isTimeOdd]);
 	}
 	else
 	{
 		m_axon[isTimeOdd] = 0;
-		m_excitationMax = 0;
 	}
 }
 
@@ -399,6 +399,7 @@ uint32_t PremotorNeuron::ReadAxon() const
 
 void PremotorNeuron::AddReinforcement(uint32_t reinforcement)
 {
+	return;
 	if (IsActive() && m_motorSynapses[m_activatedSynapseIndex].IsActive())
 	{
 		m_motorSynapses[m_activatedSynapseIndex].AddWeight(reinforcement);

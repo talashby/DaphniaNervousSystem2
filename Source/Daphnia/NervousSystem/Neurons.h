@@ -233,6 +233,7 @@ private:
 	uint32_t m_axon[2];
 	uint32_t m_activatedSynapseIndex = 0;
 	uint32_t m_excitationMax = 0;
+	uint64_t m_excitationTimeStart = 0;
 };
 
 typedef std::array<uint32_t, 8> TransferMotivationArray; // left, right, up, down and diagonals
