@@ -231,9 +231,13 @@ void SimpleAdderNeuron::Tick()
 	}
 	if (axon < m_axon[isTimeOdd])
 	{
-		if (m_axon[isTimeOdd] > 0)
+		if (m_axon[isTimeOdd] > EXCITATION_MULTIPLIER)
 		{
-			--m_axon[isTimeOdd];
+			m_axon[isTimeOdd] -= EXCITATION_MULTIPLIER;
+		}
+		else
+		{
+			m_axon[isTimeOdd] = 0;
 		}
 	}
 	else
@@ -399,7 +403,6 @@ uint32_t PremotorNeuron::ReadAxon() const
 
 void PremotorNeuron::AddReinforcement(uint32_t reinforcement)
 {
-	return;
 	if (IsActive() && m_motorSynapses[m_activatedSynapseIndex].IsActive())
 	{
 		m_motorSynapses[m_activatedSynapseIndex].AddWeight(reinforcement);
@@ -546,7 +549,7 @@ void MotivationTransferNeuron::Tick()
 
 			for (PremotorNeuron* premotorNeuron : neighbourPremotorNeurons)
 			{
-				premotorNeuron->AddReinforcement(devidendReinforcement / neighbourPremotorNeurons.size());
+				premotorNeuron->AddReinforcement(devidendReinforcement / neighbourPremotorNeurons.size() + 1);
 			}
 			m_reinforcement -= devidendReinforcement;
 		}
