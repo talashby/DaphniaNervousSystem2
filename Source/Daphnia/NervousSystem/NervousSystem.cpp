@@ -16,6 +16,7 @@
 #include <xutility>
 
 #define HIGH_PRECISION_STATS 1
+constexpr bool NO_NEWNESS_NETWORK = true;
 
 // constants
 constexpr uint32_t c_eyeGeneralizationNetworkOneSideSize = 5;
@@ -153,6 +154,16 @@ void NervousSystem::Init()
 		uint32_t firstNeuronNum = 0;
 		for (auto &el : s_networksMetadata)
 		{
+			if (NO_NEWNESS_NETWORK)
+			{
+				MotivationTransferNeuron neuron;
+				if (&s_motivationTransferNewnessNetwork[0] == reinterpret_cast<void*>(el.m_begin) ||
+					&s_motivationSourceNewnessNetwork[0] == reinterpret_cast<void*>(el.m_begin) ||
+					&s_premotorNewnessNetwork[0] == reinterpret_cast<void*>(el.m_begin) )
+				{
+					continue;
+				}
+			}
 			el.m_beginNeuronNum = firstNeuronNum;
 			el.m_endNeuronNum = firstNeuronNum + (uint32_t)((el.m_end - el.m_begin) / el.m_size);
 			firstNeuronNum = el.m_endNeuronNum;
@@ -375,8 +386,9 @@ uint64_t NervousSystem::GetTime() const
 
 void NervousSystem::NextTick(uint64_t timeOfTheUniverse)
 {
-	while(s_waitThreadsCount) // Is Tick Finished
+	while(s_waitThreadsCount && IsSimulationRunning()) // Is Tick Finished
 	{ }
+	if (IsSimulationRunning())
 	{
 		if (timeOfTheUniverse > s_time)
 		{
